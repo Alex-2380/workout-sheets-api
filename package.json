@@ -1,0 +1,12 @@
+{
+  "name": "workout-sheets-api",
+  "version": "1.0.0",
+  "description": "Serverless API for Workout Tracker - reads/writes Google Sheets",
+  "main": "api/sheets.js",
+  "scripts": {
+    "start": "node api/sheets.js"
+  },
+  "dependencies": {
+    "googleapis": "^119.0.0"
+  }
+}
