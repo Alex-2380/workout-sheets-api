@@ -1,7 +1,8 @@
 {
   "name": "workout-sheets-api",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {},
-  "dependencies": {}
+  "main": "api/sheets.js",
+  "dependencies": {
+    "googleapis": "^132.0.0"
+  }
 }
