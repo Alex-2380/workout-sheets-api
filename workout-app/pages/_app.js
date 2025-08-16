@@ -1,23 +1,6 @@
-import '../styles/globals.css';
-import { useState, useEffect } from 'react';
+import "../styles/globals.css";
+import AppContainer from "../components/AppContainer";
 
-function MyApp({ Component, pageProps }) {
-  const [theme, setTheme] = useState('dark');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) setTheme(saved);
-    document.body.className = saved || 'dark';
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    document.body.className = newTheme;
-    localStorage.setItem('theme', newTheme);
-  };
-
-  return <Component {...pageProps} theme={theme} toggleTheme={toggleTheme} />;
+export default function App({ Component, pageProps }) {
+  return <AppContainer />;
 }
-
-export default MyApp;
