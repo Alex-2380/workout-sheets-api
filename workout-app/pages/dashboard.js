@@ -1,29 +1,29 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import NavBar from '../components/NavBar';
-import RoutineCard from '../components/RoutineCard';
+// pages/dashboard.js
+import { useState, useEffect } from "react";
 
-export default function Dashboard({ theme, toggleTheme }) {
-  const router = useRouter();
-  const [routines, setRoutines] = useState([]);
-  const user = localStorage.getItem('user');
+export default function Dashboard() {
+  const [theme, setTheme] = useState("dark"); // default dark theme
+  const [loading, setLoading] = useState(true); // wait until browser runs
 
   useEffect(() => {
-    if (!user) router.push('/');
-    fetch('/api/sheets?tab=Routines')
-      .then(res => res.json())
-      .then(data => setRoutines(data))
-      .catch(err => console.error(err));
+    // Only runs in browser
+    const storedTheme = localStorage.getItem("theme");
+    if (storedTheme) setTheme(storedTheme);
+    setLoading(false);
   }, []);
 
+  if (loading) return <div>Loading...</div>;
+
   return (
-    <div className="container">
+    <div className={theme === "dark" ? "dark-theme" : "light-theme"}>
       <h1>Dashboard</h1>
-      <button onClick={toggleTheme}>Toggle Theme</button>
-      {routines.map((routine, i) => (
-        <RoutineCard key={i} routine={routine} />
-      ))}
-      <NavBar />
+      <div>
+        <button onClick={() => alert("Start Workout")}>Start Workout</button>
+        <button onClick={() => alert("View Routine")}>View Current Routine</button>
+        <button onClick={() => alert("Progress")}>Progress</button>
+        <button onClick={() => alert("Previous Workouts")}>Previous Workouts</button>
+        <button onClick={() => alert("Settings")}>Settings</button>
+      </div>
     </div>
   );
 }
