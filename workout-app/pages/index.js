@@ -1,35 +1,43 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { storage } from '../utils/storage';
+import { sheets } from '../utils/sheetsClient';
+import { getTheme, setTheme, availableAccents } from '../utils/theme';
 
-export default function Login({ theme, toggleTheme }) {
-  const router = useRouter();
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState('');
+export default function Login() {
+  const [users, setUsers] = useState(storage.getCachedUsers());
+  const [selected, setSelected] = useState('');
+  const theme = getTheme();
 
-  useEffect(() => {
-    fetch('/api/sheets?tab=Users')
-      .then(res => res.json())
-      .then(data => setUsers(data))
-      .catch(err => console.error(err));
+  useEffect(()=>{
+    // fetch users (cache first)
+    sheets.getUsers()
+      .then(list => { setUsers(list); storage.cacheUsers(list); })
+      .catch(()=>{ /* offline */});
   }, []);
 
-  const handleLogin = () => {
-    if (!selectedUser) return alert('Select a user');
-    localStorage.setItem('user', selectedUser);
-    router.push('/dashboard');
-  };
+  function login() {
+    if (!selected) return;
+    storage.setUser({ name: selected });
+    window.location.href = '/dashboard';
+  }
 
   return (
-    <div className="container">
-      <h1>Welcome to Workout App</h1>
-      <select onChange={e => setSelectedUser(e.target.value)} value={selectedUser}>
-        <option value="">Select User</option>
-        {users.map((user, i) => (
-          <option key={i} value={user.Users}>{user.Users}</option>
-        ))}
-      </select>
-      <button onClick={handleLogin}>Login</button>
-      <button onClick={toggleTheme}>Toggle Theme</button>
+    <div className="grid fade-in">
+      <div className="card">
+        <div className="h1">Welcome to LiftLog</div>
+        <div className="muted" style={{opacity:.8, margin:'6px 0 12px'}}>Fast, offline-friendly tracker with Google Sheets sync.</div>
+
+        <div className="grid">
+          <label className="muted">Select user</label>
+          <select value={selected} onChange={e=>setSelected(e.target.value)}>
+            <option value="">— Choose —</option>
+            {users.map(u => <option key={u.name} value={u.name}>{u.name}</option>)}
+          </select>
+          <button className="primary" onClick={login}>Login</button>
+          <Link href="/settings" className="ghost">Theme & Settings</Link>
+        </div>
+      </div>
     </div>
   );
 }
