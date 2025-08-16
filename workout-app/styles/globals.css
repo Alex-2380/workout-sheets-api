@@ -1,7 +1,79 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Dark and Light Mode Variables */
+:root {
+  --background-dark: #121212;
+  --text-dark: #ffffff;
+  --accent-dark: #FF9500;
 
-body {
-  @apply bg-gray-900 text-white;
+  --background-light: #ffffff;
+  --text-light: #121212;
+  --accent-light: #FF9500;
+
+  --card-radius: 14px;
+  --card-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+body.dark {
+  background-color: var(--background-dark);
+  color: var(--text-dark);
+}
+
+body.light {
+  background-color: var(--background-light);
+  color: var(--text-light);
+}
+
+button {
+  padding: 12px 16px;
+  border-radius: var(--card-radius);
+  border: none;
+  background-color: var(--accent-dark);
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* Card styling */
+.card {
+  background-color: inherit;
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
+  margin: 12px 0;
+}
+
+/* Mobile-first layout */
+.container {
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: var(--card-radius);
+  border: 1px solid #ccc;
+}
+
+.popout {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: inherit;
+  border-top-left-radius: var(--card-radius);
+  border-top-right-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
+  transition: transform 0.3s ease-in-out;
+}
+
+.hidden {
+  transform: translateY(100%);
 }
