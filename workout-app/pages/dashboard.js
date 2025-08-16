@@ -1,28 +1,29 @@
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import NavBar from '../components/NavBar';
+import RoutineCard from '../components/RoutineCard';
 
-export default function Dashboard() {
+export default function Dashboard({ theme, toggleTheme }) {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [routines, setRoutines] = useState([]);
+  const user = localStorage.getItem('user');
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("username");
-    if (!savedUser) {
-      router.push("/");
-    } else {
-      setUsername(savedUser);
-    }
+    if (!user) router.push('/');
+    fetch('/api/sheets?tab=Routines')
+      .then(res => res.json())
+      .then(data => setRoutines(data))
+      .catch(err => console.error(err));
   }, []);
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-      <h1 className="text-2xl font-bold mb-6">Welcome, {username}</h1>
-      <button
-        onClick={() => router.push("/workout")}
-        className="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-xl font-semibold"
-      >
-        Start Workout
-      </button>
+    <div className="container">
+      <h1>Dashboard</h1>
+      <button onClick={toggleTheme}>Toggle Theme</button>
+      {routines.map((routine, i) => (
+        <RoutineCard key={i} routine={routine} />
+      ))}
+      <NavBar />
     </div>
   );
 }
