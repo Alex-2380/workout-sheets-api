@@ -7,26 +7,27 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing 'tab' query parameter" });
     }
 
-    // Load credentials from environment
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
-    const client = new google.auth.JWT(
-      credentials.client_email,
-      null,
-      credentials.private_key,
-      ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-    );
+    // Load credentials
+    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
-    const sheets = google.sheets({ version: "v4", auth: client });
-
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.SHEET_ID,
-      range: tab, // e.g. "Routines" or "Users"
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
 
-    const rows = result.data.values || [];
-    res.status(200).json({ data: rows });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    const sheets = google.sheets({ version: "v4", auth });
+
+    // Replace with your real spreadsheetId
+    const spreadsheetId = process.env.SPREADSHEET_ID;
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: tab,
+    });
+
+    res.status(200).json(response.data.values);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 }
