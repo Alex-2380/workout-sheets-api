@@ -1,41 +1,35 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-export default function Login() {
-  const [username, setUsername] = useState("");
+export default function Login({ theme, toggleTheme }) {
   const router = useRouter();
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState('');
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("username");
-    if (savedUser) {
-      router.push("/dashboard");
-    }
+    fetch('/api/sheets?tab=Users')
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error(err));
   }, []);
 
   const handleLogin = () => {
-    if (!username.trim()) return;
-    localStorage.setItem("username", username.trim());
-    router.push("/dashboard");
+    if (!selectedUser) return alert('Select a user');
+    localStorage.setItem('user', selectedUser);
+    router.push('/dashboard');
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
-      <div className="p-6 bg-gray-800 rounded-2xl shadow-lg w-80">
-        <h1 className="text-xl font-bold mb-4 text-center">Workout Tracker</h1>
-        <input
-          type="text"
-          placeholder="Enter username"
-          className="w-full p-2 mb-4 rounded bg-gray-700 text-white focus:outline-none"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <button
-          onClick={handleLogin}
-          className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded font-semibold"
-        >
-          Continue
-        </button>
-      </div>
+    <div className="container">
+      <h1>Welcome to Workout App</h1>
+      <select onChange={e => setSelectedUser(e.target.value)} value={selectedUser}>
+        <option value="">Select User</option>
+        {users.map((user, i) => (
+          <option key={i} value={user.Users}>{user.Users}</option>
+        ))}
+      </select>
+      <button onClick={handleLogin}>Login</button>
+      <button onClick={toggleTheme}>Toggle Theme</button>
     </div>
   );
 }
