@@ -1,17 +1,32 @@
-export default function handler(req, res) {
-  const { tab } = req.query;
+import { google } from "googleapis";
 
-  if (!tab) {
-    return res.status(400).json({ error: "Missing 'tab' query parameter" });
-  }
+export default async function handler(req, res) {
+  try {
+    const { tab } = req.query;
+    if (!tab) {
+      return res.status(400).json({ error: "Missing 'tab' query parameter" });
+    }
 
-  if (tab === "Routines") {
-    return res.status(200).json([
-      { Routine: "MAX 30 (PHASE 1)", Day: 1, Exercise: "ROMANIAN DEADLIFT", Sets: 3, "Target Reps": 10 },
-      { Routine: "MAX 30 (PHASE 1)", Day: 1, Exercise: "EZ BAR CURLS", Sets: 3, "Target Reps": 10 },
-      { Routine: "MAX 30 (PHASE 1)", Day: 1, Exercise: "REVERSE CRUNCH", Sets: 3, "Target Reps": 15 },
-    ]);
-  } else {
-    return res.status(404).json({ error: `No data for tab ${tab}` });
+    // Load credentials from environment
+    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+    const client = new google.auth.JWT(
+      credentials.client_email,
+      null,
+      credentials.private_key,
+      ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    );
+
+    const sheets = google.sheets({ version: "v4", auth: client });
+
+    const result = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.SHEET_ID,
+      range: tab, // e.g. "Routines" or "Users"
+    });
+
+    const rows = result.data.values || [];
+    res.status(200).json({ data: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 }
