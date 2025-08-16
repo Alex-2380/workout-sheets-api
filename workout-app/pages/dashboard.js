@@ -1,28 +1,13 @@
-// pages/dashboard.js
-import { useState, useEffect } from "react";
-
-export default function Dashboard() {
-  const [theme, setTheme] = useState("dark"); // default dark theme
-  const [loading, setLoading] = useState(true); // wait until browser runs
-
-  useEffect(() => {
-    // Only runs in browser
-    const storedTheme = localStorage.getItem("theme");
-    if (storedTheme) setTheme(storedTheme);
-    setLoading(false);
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-
+export default function Dashboard({ navigate }) {
   return (
-    <div className={theme === "dark" ? "dark-theme" : "light-theme"}>
+    <div>
       <h1>Dashboard</h1>
       <div>
-        <button onClick={() => alert("Start Workout")}>Start Workout</button>
-        <button onClick={() => alert("View Routine")}>View Current Routine</button>
-        <button onClick={() => alert("Progress")}>Progress</button>
-        <button onClick={() => alert("Previous Workouts")}>Previous Workouts</button>
-        <button onClick={() => alert("Settings")}>Settings</button>
+        <button onClick={() => navigate("workout")}>Start Workout</button>
+        <button onClick={() => navigate("routine")}>View Current Routine</button>
+        <button onClick={() => navigate("progress")}>Progress</button>
+        <button onClick={() => navigate("previous")}>Previous Workouts</button>
+        <button onClick={() => navigate("settings")}>Settings</button>
       </div>
     </div>
   );
