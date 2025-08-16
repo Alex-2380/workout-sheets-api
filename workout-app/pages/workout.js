@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import ExerciseCard from '../components/ExerciseCard';
 import WorkoutSummaryPopup from '../components/WorkoutSummaryPopup';
+import Timer from '../components/Timer';
+import PlateCalculator from '../components/PlateCalculator';
+import OneRepMaxCalculator from '../components/OneRepMaxCalculator';
 
 export default function Workout({ theme }) {
   const router = useRouter();
@@ -25,6 +28,11 @@ export default function Workout({ theme }) {
       ))}
       <button onClick={() => setShowSummary(true)}>Finish Workout</button>
       {showSummary && <WorkoutSummaryPopup onClose={() => setShowSummary(false)} />}
+
+    <div className="tools">
+      <Timer />
+      <PlateCalculator />
+      <OneRepMaxCalculator />
     </div>
   );
 }
