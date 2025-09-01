@@ -49,7 +49,21 @@
 
 /* Reset / global */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body, #__next { height: 100%; background: var(--bg); color: var(--text); }
+/* Apply theme background to html and body */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg); /* <-- your theme background variable */
+  overscroll-behavior-y: contain; /* prevents Safari bounce showing wrong color */
+  -webkit-overflow-scrolling: touch; /* keeps smooth scrolling on iOS */
+}
+
+/* Make the Next.js root container full height */
+#__next {
+  min-height: 100%;
+  background: var(--bg);
+}
 body {
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Arial, "Apple Color Emoji", "Segoe UI Emoji";
