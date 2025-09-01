@@ -1,0 +1,519 @@
+:root {
+  --bg: #0b0b0e;
+  --panel: #141419;
+  --text: #e9eaee;
+  --textmod: #0b0b0e;
+  --muted: #a8acb8;
+
+  /* THEME COLORS */
+  --accent: hsl(160, 100%, 50%);     /* Primary (default blue) */
+  --secondary: hsl(40, 100%, 50%);    /* Secondary (default red) */
+
+  --success: #4ade80;
+  --danger: #ef4444;
+
+  /* Dark mode surface tuning */
+  --card-border: rgba(255,255,255,.06);
+  --input-bg: #1c1f26;
+  --input-border: rgba(255,255,255,.10);
+  --kpi-bg: rgba(255,255,255,.04);
+
+  --btn-bg: #0f1218;
+  --btn-border: rgba(255,255,255,.10);
+  --btn-bg-hover: #141923;
+  --btn-bg-active: #0c0f14;
+
+  --radius: 16px;
+}
+
+:root[data-theme="light"] {
+  --bg: #c5c5c7;
+  --panel: #e1e1e3;
+  --text: #0b0b0e;
+  --textmod: #e9eaee;
+  --muted: #4a5561;
+
+  --accent: hsl(220, 100%, 50%);
+  --secondary: hsl(0, 100%, 50%);
+
+  --card-border: #aeaeb0;
+  --input-bg: #eceff3;
+  --input-border: #c7c7c9;
+  --kpi-bg: #e9eef6;
+
+  --btn-bg: #dde3ea;
+  --btn-border: #aeaeb0;
+  --btn-bg-hover: #d6dde6;
+  --btn-bg-active: #cfd6dd;
+}
+
+/* Reset / global */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #__next { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--text);
+}
+a { color: inherit; text-decoration: none; }
+
+button, .action {
+  border: none;
+  cursor: pointer;
+  background: none;
+  color: inherit;
+  font: inherit;
+  transition: transform .06s ease, filter .2s ease, background .2s ease;
+}
+
+/* Inputs */
+input, select, textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  outline: none;
+}
+
+/* Layout */
+.container { max-width: 860px; margin: 0 auto; padding: 16px; }
+
+/* Card */
+.card {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 16px;
+  border: 1px solid var(--card-border);
+}
+
+/* Typography */
+.h1 { font-weight: 700; font-size: 28px; letter-spacing: -0.02em; }
+.h2 { font-weight: 700; font-size: 20px; margin: 0 0 8px 0; }
+.muted { color: var(--muted); }
+
+/* Grid helpers */
+.grid { display: grid; gap: 12px; }
+.grid-2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+
+/* Primary button */
+.primary {
+  background: var(--accent);
+  color: #0b0b0e;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+:root[data-theme="light"] .primary {
+  color: var(--textmod);
+}
+
+.primary:hover { filter: brightness(1.05); }
+.primary:active { transform: translateY(1px) scale(.98); }
+
+/* Ghost / secondary button */
+.ghost,
+.secondary {
+  background: transparent;
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.ghost:hover, .secondary:hover { filter: brightness(1.03); }
+.ghost:active, .secondary:active { transform: translateY(1px) scale(.98); }
+.ghost:focus, .secondary:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Unified action button */
+.action {
+  display: inline-block;
+  background: var(--btn-bg);
+  color: var(--accent);
+  border: 1px solid var(--btn-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 700;
+  text-align: center;
+}
+.action:hover { background: var(--btn-bg-hover); }
+.action:active { background: var(--btn-bg-active); transform: translateY(1px) scale(.98); }
+.action:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Tool chips */
+.tool-chip {
+  background: var(--panel);
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+.tool-chip:hover { filter: brightness(1.03); }
+.tool-chip:active { transform: translateY(1px) scale(.98); }
+.tool-chip:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.badge { display: inline-block; font-size: 12px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.06); }
+:root[data-theme="light"] .badge { background: #f0f6ff; }
+
+/* Toolbar */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: linear-gradient(to bottom, rgba(11,11,14,.92), rgba(11,11,14,.76) 65%, transparent);
+  backdrop-filter: blur(10px);
+}
+:root[data-theme="light"] .toolbar {
+  background: linear-gradient(to bottom, #c5c5c7, #c5c5c7 80%, transparent);
+}
+
+/* Other helpers */
+.row { display: grid; grid-template-columns: 1fr 80px 80px; gap: 8px; }
+.kpi { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-radius:12px; background: var(--kpi-bg); }
+
+.fade-in { animation: fadeIn .24s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px)} to {opacity: 1; transform: none} }
+
+.divider { height: 1px; background: rgba(255,255,255,.08); margin: 12px 0; }
+:root[data-theme="light"] .divider { background: var(--card-border); }
+
+.footer-space { height: 80px; }
+
+/* ---------- Color picker (authoritative, replace previous rules) ---------- */
+
+/* Default (dark-mode style / fallback) */
+.color-bar-container {
+  position: relative;
+  width: 100%;
+  height: 25px;
+  border-radius: 16px;
+  margin: 12px 0;
+  overflow: visible;
+
+  /* smooth hue progression using the chosen S/L for dark mode (100% / 50%) */
+  background: linear-gradient(
+    to right,
+    hsl(0, 100%, 50%),
+    hsl(30, 100%, 50%),
+    hsl(60, 100%, 50%),
+    hsl(120, 100%, 50%),
+    hsl(180, 100%, 50%),
+    hsl(210, 100%, 50%),
+    hsl(240, 100%, 50%),
+    hsl(300, 100%, 50%),
+    hsl(360, 100%, 50%)
+  );
+}
+
+/* Light-mode variant: same hue progression but with the lighter-mode S/L (100% / 40%) */
+:root[data-theme="light"] .color-bar-container {
+  background: linear-gradient(
+    to right,
+    hsl(0, 100%, 40%),
+    hsl(30, 100%, 40%),
+    hsl(60, 100%, 40%),
+    hsl(120, 100%, 40%),
+    hsl(180, 100%, 40%),
+    hsl(210, 100%, 40%),
+    hsl(240, 100%, 40%),
+    hsl(300, 100%, 40%),
+    hsl(360, 100%, 40%)
+  );
+}
+
+/* Strongly-specific handle rules so nothing else can accidentally change size */
+.color-bar-container .color-slider {
+  position: absolute;
+  left: 0;                      /* inline style will set percentage left */
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px !important;       /* enforce consistent width */
+  height: 35px !important;      /* enforce consistent height */
+  min-width: 10px;
+  min-height: 28px;
+  border-radius: 6px;
+  background: #111;
+  border: 1px solid var(--accent);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  cursor: pointer;
+  touch-action: none;
+  transition: left 0.05s linear, transform .08s ease;
+  z-index: 2;
+}
+
+/* Override if .secondary accidentally targets the color-slider element */
+.color-bar-container .color-slider.secondary {
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--secondary);
+  width: 10px !important;
+  height: 35px !important;
+  min-width: 10px !important;
+  min-height: 28px !important;
+  border-radius: 6px !important;
+  transform: translate(-50%, -50%) !important; /* ensure centering */
+  top: 50% !important;
+}
+
+/* Small active / focus affordance */
+.color-bar-container .color-slider:active,
+.color-bar-container .color-slider:focus {
+  transform: translate(-50%, -50%) scale(1.04);
+  outline: none;
+}
+
+/* Theme application: target-reps in secondary color */
+.target-reps { color: var(--secondary); padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+
+/* Accent the "Set X" labels everywhere (workout + summary) */
+.set-label { color: var(--accent); font-weight: 800; }
+
+/* Previous data: semi-transparent gray */
+.prev-data { color: var(--muted); opacity: .55; }
+
+/* Inputs bigger/bolder */
+.sets-area input.set-input {
+  color: var(--text);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+/* Make the whole left area obviously tappable */
+.copy-area { cursor: pointer; }
+.copy-area:hover { filter: brightness(1.03); }
+
+/* helpers */
+.text-accent { color: var(--accent); }
+.text-secondary { color: var(--secondary); }
+.border-accent { border-color: var(--accent) !important; }
+.border-secondary { border-color: var(--secondary) !important; }
+.value-secondary { color: var(--secondary); font-weight: 700; }
+
+/* Full-screen centered container */
+.full-screen-center {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 30;
+  background: transparent;
+}
+
+/* Slightly larger welcome card */
+.welcome-card {
+  max-width: 560px;
+  width: 92%;
+  padding: 20px;
+}
+
+/* Slow/longer fade used for welcome/login/dashboard to feel classy */
+.fade-in-slow {
+  animation: fadeInLong 1.05s ease both;
+}
+@keyframes fadeInLong {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* -------- Bottom Sheet (Summary) : anchored, nearly-full-height, single scroll -------- */
+
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;    /* center horizontally */
+  background: rgba(0,0,0,0.64);
+  backdrop-filter: blur(18px);
+  z-index: 1200;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+:root[data-theme="light"] .sheet-overlay {
+  background: rgba(0,0,0,0.0);
+  backdrop-filter: blur(0px);
+}
+
+/* fixed sheet anchored bottom, nearly full viewport height */
+.sheet-card {
+  position: relative;            /* relative to overlay */
+  width: calc(100% - 0px);      /* left + right padding */
+  max-width: 1040px;
+  max-height: calc(100vh - 72px); /* nearly full height */
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-top: 1px solid var(--card-border);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -28px 64px rgba(0,0,0,0.6);
+  padding: 16px;
+  overflow: hidden;              /* only .sheet-body scrolls */
+}
+
+.sheet-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); /* room for sticky actions */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* slide-up animation */
+.slide-up {
+  animation: sheetUp .28s cubic-bezier(.2,.85,.25,1) both;
+}
+@keyframes sheetUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* muted label + value spacing inside KPIs inside sheet */
+.sheet-card .kpi span { color: var(--muted); margin-right: 10px; font-size: 13px; }
+.sheet-card .kpi strong { color: var(--text); }
+
+/* actions: sticky (always visible) at the bottom of the sheet */
+.modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 6px;
+  border-top: 1px solid var(--card-border);
+  background: linear-gradient(to top, var(--panel) 88%, rgba(0,0,0,0));
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+/* tiny helper to ensure last child isn't clipped */
+.sheet-body > *:last-child { margin-bottom: 8px; }
+
+/* keep summary numbers in secondary color */
+.value-secondary { color: var(--secondary); }
+
+/* achievements list */
+.clean-list { list-style: none; padding: 0; margin: 0; }
+.clean-list li { padding: 6px 0; border-bottom: 1px solid var(--card-border); }
+.clean-list li:last-child { border-bottom: 0; }
+
+.sheet-body .card.achievements li {
+  color: var(--muted);       /* muted gray for label */
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.sheet-body .card.achievements .h2 {
+  color: var(--secondary);   /* secondary color for actual achievements */
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 1.4;
+}
+
+/* Dashboard layout tweaks (scoped) */
+.dashboard { padding-top: 50px; }
+
+/* KPI label: muted & small */
+.dashboard .card.kpi span {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* KPI value: match weight/scale of buttons/h2 family but not huge */
+.dashboard .card.kpi strong {
+  color: var(--text);
+  font-size: 16px;      /* matches visual rhythm with buttons */
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+/* Stack & center layout for the two top KPI cards */
+.dashboard .card.kpi.kpi--center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+/* Slightly more breathing room for KPI cards */
+.dashboard .card.kpi {
+  padding: 18px 16px;
+  min-height: 50px;
+}
+
+/* Current routine value colored secondary for emphasis */
+.dashboard .card.kpi.current-routine strong {
+  color: var(--secondary);
+}
+
+/* Actions spacing */
+.dashboard .grid.actions { margin-top: 18px; }
+
+/* Responsive: on very narrow screens keep them stacked */
+@media (max-width: 640px) {
+  .dashboard .grid-2 { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* --- Routine header stays primary, centered --- */
+.routine-page .header-card { text-align: center; padding: 12px; }
+.routine-page .title-accent { color: var(--accent); margin: 0; }
+
+/* Day title = secondary */
+.routine-page .day-title { color: var(--secondary); margin: 0 0 6px 0; }
+
+/* Slightly tighter cards + grid */
+.routine-page .card { padding: 12px; }
+.routine-page .card .grid.exercises { gap: 8px; }
+
+/* Prevent squish; adjust sizes */
+.routine-page .kpi { padding: 10px 12px; min-width: 0; }
+.routine-page .kpi span { font-size: 14px; }
+
+/* Exercise name slightly thicker */
+.routine-page .kpi .exercise-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600; /* a touch thicker */
+}
+
+/* Make BOTH sets × reps muted gray */
+.routine-page .kpi .sr {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+
+/* prev-page: spacing + summary-like layout */
+.prev-page { padding-top: 12px; }
+
+.prev-page .header-card { text-align: center; padding: 12px; margin-bottom: 30px;}
+.prev-page .page-title { font-size: 20px; font-weight: 700; }
+
+.prev-page .session-card { margin-bottom: 2px; overflow: visible; }
+.prev-page .session-header { width: 100%; text-align: left; }
+.prev-page .session-body { padding-top: 8px; }
+
+/* use the same card + grid rhythm as the workout summary */
+.prev-page .session-body .card { padding: 12px; margin-bottom: 8px; }
+.prev-page .session-body .h2 { font-size: 18px; margin-bottom: 6px; }
+
+/* keep the same set/weight/reps styling as summary */
+.prev-page .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; }
+.prev-page .set-label { color: var(--accent); font-weight: 800; }
+.prev-page .value-secondary { color: var(--secondary); font-weight: 800; }
+.prev-page .muted { color: var(--muted); font-size: 13px; }
+
+/* small screens */
+@media (max-width:640px) {
+  .prev-page .row { grid-template-columns: 1fr 1fr; }
+  .prev-page .session-body .card { padding-left: 10px; padding-right: 10px; }
+}
