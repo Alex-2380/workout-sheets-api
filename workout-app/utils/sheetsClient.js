@@ -5,8 +5,8 @@ const PUBLIC_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
 
 function buildUrl(tab) {
   const encoded = encodeURIComponent(tab);
-  if (PUBLIC_BASE) return `${PUBLIC_BASE}/sheets?tab=${encoded}`;
-  return `/sheets?tab=${encoded}`;
+  if (PUBLIC_BASE) return `${PUBLIC_BASE}/api/sheets?tab=${encoded}`;
+  return `/api/sheets?tab=${encoded}`;
 }
 
 async function fetchJson(url) {
