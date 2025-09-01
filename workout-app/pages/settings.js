@@ -251,7 +251,7 @@ export default function Settings() {
         ok = await sheets.setUserRoutine(user.name, routineToSave);
       } else {
         // fallback: attempt a PATCH to the /sheets endpoint (some apps implement this)
-        const resp = await fetch(`/sheets?tab=Users`, {
+        const resp = await fetch(`/api/sheets?tab=Users`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
