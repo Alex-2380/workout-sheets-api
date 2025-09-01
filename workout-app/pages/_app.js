@@ -14,23 +14,33 @@ export default function App({ Component, pageProps }) {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [bgColor, setBgColor] = useState('#0b0b0e'); // default dark mode
 
   useEffect(() => {
-    // Only run client-side.
     setMounted(true);
 
-    // theme apply
-    setTheme(getTheme());
+    // Apply current theme immediately
+    const currentTheme = getTheme();
+    setTheme(currentTheme);
+
+    // Update bgColor to match theme variable
+    const root = document.documentElement;
+    const computedBg = getComputedStyle(root).getPropertyValue('--bg').trim() || '#0b0b0e';
+    setBgColor(computedBg);
+    document.body.style.backgroundColor = computedBg;
+
+    // Theme updater interval (for localStorage toggles)
+    const t = setInterval(() => {
+      setTheme(getTheme());
+      const computedBg = getComputedStyle(root).getPropertyValue('--bg').trim() || '#0b0b0e';
+      setBgColor(computedBg);
+      document.body.style.backgroundColor = computedBg;
+    }, 500);
 
     // register SW
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
-
-    // keep theme updated (reads from localStorage if user toggles settings)
-    const t = setInterval(() => {
-      setTheme(getTheme());
-    }, 500);
 
     // initial user
     setUser(storage.getUser());
@@ -45,8 +55,7 @@ export default function App({ Component, pageProps }) {
     };
   }, []);
 
-  // IMPORTANT: while NOT mounted, render a single simple placeholder both on server and client.
-  // This prevents any server/client markup mismatch.
+  // IMPORTANT: render placeholder while not mounted
   if (!mounted) {
     return (
       <>
@@ -57,7 +66,7 @@ export default function App({ Component, pageProps }) {
           <title>MaxLift</title>
         </Head>
 
-        <div className="container" style={{ paddingTop: 8 }}>
+        <div className="container" style={{ paddingTop: 8, backgroundColor: bgColor }}>
           <div className="grid fade-in">
             <div className="card">
               <div className="h1">Loading…</div>
@@ -69,7 +78,6 @@ export default function App({ Component, pageProps }) {
     );
   }
 
-  // mounted: render actual app. Header and Tools only rendered if a user is present.
   return (
     <>
       <Head>
@@ -81,7 +89,7 @@ export default function App({ Component, pageProps }) {
 
       {user && <Header onToggleTools={() => setToolsOpen(true)} />}
 
-      <div className="container" style={{ paddingTop: 8 }}>
+      <div className="container" style={{ paddingTop: 8, backgroundColor: bgColor }}>
         <Component {...pageProps} />
         <div className="footer-space" />
       </div>
