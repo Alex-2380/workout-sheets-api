@@ -55,8 +55,7 @@ html, body {
   margin: 0;
   padding: 0;
   background: var(--bg); /* <-- your theme background variable */
-  overscroll-behavior-y: contain; /* prevents Safari bounce showing wrong color */
-  -webkit-overflow-scrolling: touch; /* keeps smooth scrolling on iOS */
+  overflow: hidden;
 }
 
 /* Make the Next.js root container full height */
