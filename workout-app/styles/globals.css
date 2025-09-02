@@ -49,8 +49,23 @@
 
 /* Reset / global */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body {
-  background: var(--bg);
+/* ensure background fills the notch area for ios PWA overlay */
+html, body, #__next {
+  height: 100%;
+  background: var(--bg);   /* already present, just double-check */
+}
+
+/* ensure main container doesn't get hidden under the status bar */
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  /* fallback for browsers without safe-area support */
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+}
+
+/* if you have a top toolbar that should reach into the notch area */
+.toolbar {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 body {
   margin: 0;
@@ -292,7 +307,7 @@ select {
 .sets-area input.set-input {
   color: var(--text);
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 /* Make the whole left area obviously tappable */
