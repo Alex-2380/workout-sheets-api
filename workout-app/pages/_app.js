@@ -19,17 +19,38 @@ export default function App({ Component, pageProps }) {
     // Only run client-side.
     setMounted(true);
 
-    // theme apply
+    // apply theme once immediately
     setTheme(getTheme());
+
+    // update apple status bar meta so installed PWA shows proper overlay color
+    function updateAppleStatusBar() {
+      try {
+        const metaName = 'apple-mobile-web-app-status-bar-style';
+        let el = document.querySelector(`meta[name="${metaName}"]`);
+        if (!el) {
+          el = document.createElement('meta');
+          el.name = metaName;
+          document.head.appendChild(el);
+        }
+        const theme = getTheme();
+        // dark => white text overlay that shows our page background; light => default (black text)
+        el.content = (theme.mode === 'dark') ? 'black-translucent' : 'default';
+      } catch (e) {
+        // ignore in SSR / weird environments
+      }
+    }
+
+    updateAppleStatusBar();
 
     // register SW
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // keep theme updated (reads from localStorage if user toggles settings)
+    // keep theme + apple meta updated (reads from localStorage if user toggles settings)
     const t = setInterval(() => {
       setTheme(getTheme());
+      updateAppleStatusBar();
     }, 500);
 
     // initial user
@@ -46,21 +67,21 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   // IMPORTANT: while NOT mounted, render a single simple placeholder both on server and client.
+  // This prevents any server/client markup mismatch.
   if (!mounted) {
     return (
       <>
         <Head>
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
-          />
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
           <meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)" />
           <meta name="theme-color" content="#c5c5c7" media="(prefers-color-scheme: light)" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
           <link rel="manifest" href="/manifest.json" />
           <title>MaxLift</title>
         </Head>
 
-        <div className="container" style={{ paddingTop: 8 }}>
+        <div className="container" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))' }}>
           <div className="grid fade-in">
             <div className="card">
               <div className="h1">Loading…</div>
@@ -72,23 +93,22 @@ export default function App({ Component, pageProps }) {
     );
   }
 
-  // mounted: render actual app
+  // mounted: render actual app. Header and Tools only rendered if a user is present.
   return (
     <>
       <Head>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
         <meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#c5c5c7" media="(prefers-color-scheme: light)" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="manifest" href="/manifest.json" />
         <title>MaxLift</title>
       </Head>
 
       {user && <Header onToggleTools={() => setToolsOpen(true)} />}
 
-      <div className="container" style={{ paddingTop: 8 }}>
+      <div className="container" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))' }}>
         <Component {...pageProps} />
         <div className="footer-space" />
       </div>
