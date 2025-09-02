@@ -444,7 +444,7 @@ select {
 }
 
 /* Dashboard layout tweaks (scoped) */
-.dashboard { padding-top: 50px; }
+.dashboard { padding-top: 20px; }
 
 /* KPI label: muted & small */
 .dashboard .card.kpi span {
