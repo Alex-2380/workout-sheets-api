@@ -46,13 +46,16 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   // IMPORTANT: while NOT mounted, render a single simple placeholder both on server and client.
-  // This prevents any server/client markup mismatch.
   if (!mounted) {
     return (
       <>
         <Head>
-          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-          <meta name="theme-color" content="var(--accent)" />
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+          />
+          <meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)" />
+          <meta name="theme-color" content="#c5c5c7" media="(prefers-color-scheme: light)" />
           <link rel="manifest" href="/manifest.json" />
           <title>MaxLift</title>
         </Head>
@@ -69,12 +72,16 @@ export default function App({ Component, pageProps }) {
     );
   }
 
-  // mounted: render actual app. Header and Tools only rendered if a user is present.
+  // mounted: render actual app
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-        <meta name="theme-color" content="var(--accent)" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+        />
+        <meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#c5c5c7" media="(prefers-color-scheme: light)" />
         <link rel="manifest" href="/manifest.json" />
         <title>MaxLift</title>
       </Head>
