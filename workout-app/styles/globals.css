@@ -60,7 +60,7 @@ html, body, #__next {
   max-width: 860px;
   margin: 0 auto;
   /* fallback for browsers without safe-area support */
-  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-top: 16px;
 }
 
 /* if you have a top toolbar that should reach into the notch area */
