@@ -81,7 +81,7 @@ export default function App({ Component, pageProps }) {
           <title>MaxLift</title>
         </Head>
 
-        <div className="container" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))' }}>
+        <div className="container" style={{ paddingTop: 8 }}>
           <div className="grid fade-in">
             <div className="card">
               <div className="h1">Loading…</div>
@@ -108,7 +108,7 @@ export default function App({ Component, pageProps }) {
 
       {user && <Header onToggleTools={() => setToolsOpen(true)} />}
 
-      <div className="container" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))' }}>
+      <div className="container" style={{ paddingTop: 8 }}>
         <Component {...pageProps} />
         <div className="footer-space" />
       </div>
