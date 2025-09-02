@@ -49,25 +49,9 @@
 
 /* Reset / global */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-/* Apply theme background to html and body */
 html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  background: var(--bg); /* <-- your theme background variable */
-}
-.fullscreen-container {
-  position: relative;
-  height: 100vh;
-  width: 100%;
-  overflow-y: auto;
-  background: linear-gradient(to bottom, #1B1B1B, #414345);
-  background-attachment: fixed;
-}
-/* Make the Next.js root container full height */
-#__next {
-  min-height: 100%;
   background: var(--bg);
+  overscroll-behavior: none;
 }
 body {
   margin: 0;
@@ -94,6 +78,18 @@ input, select, textarea {
   border-radius: 12px;
   padding: 12px 14px;
   outline: none;
+}
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  line-height: 1;
 }
 
 /* Layout */
