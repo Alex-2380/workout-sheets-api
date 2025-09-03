@@ -50,9 +50,15 @@
 /* Reset / global */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 /* ensure background fills the notch area for ios PWA overlay */
+
+/* make viewport sizing robust in iOS PWAs (dynamic viewport) */
 html, body, #__next {
   height: 100%;
-  background: var(--bg);   /* already present, just double-check */
+  min-height: 100dvh;               /* use dynamic viewport when available */
+  background-color: var(--bg);      /* explicit background-color helps in standalone mode */
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ensure main container doesn't get hidden under the status bar */
@@ -60,7 +66,7 @@ html, body, #__next {
   max-width: 860px;
   margin: 0 auto;
   /* fallback for browsers without safe-area support */
-  padding-top: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
 }
 
 /* if you have a top toolbar that should reach into the notch area */
