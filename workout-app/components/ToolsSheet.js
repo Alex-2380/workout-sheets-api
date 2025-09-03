@@ -386,6 +386,7 @@ export default function ToolsSheet({ open, onClose }) {
   const [running, setRunning] = useState(false);
   const tickRef = useRef(null);
   const finishedNotifiedRef = useRef(false);
+  const cardRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -396,6 +397,57 @@ export default function ToolsSheet({ open, onClose }) {
   useEffect(() => {
     if (running) finishedNotifiedRef.current = false;
   }, [running]);
+
+  // Ensure the sheet is sized to reach the bottom on first paint (iOS PWA often reports viewport metrics late)
+  useEffect(() => {
+    if (!open) return;
+    const el = cardRef.current;
+    if (!el) return;
+
+    const topGap = 84; // space to keep above the sheet (tweak if you want it closer/further from top)
+    const safety = 2;  // small extra pixels to avoid 1px gaps
+
+    const adjust = () => {
+      try {
+        const vv = window.visualViewport;
+        const vh = (vv && vv.height) ? vv.height : window.innerHeight;
+
+        // Apply explicit height and pin bottom to 0 so it reaches the bottom immediately.
+        el.style.height = `${targetHeight}px`;
+        el.style.bottom = '0px';
+
+        // Force layout read so the UA commits the change.
+        void el.offsetHeight;
+      } catch (e) {
+        // noop - defensive in case of unexpected environment
+      }
+    };
+
+    // Run immediately and a couple more times to catch iOS timing races
+    adjust();
+    const rafId = requestAnimationFrame(adjust);
+    const timeoutId = setTimeout(adjust, 160);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', adjust);
+    }
+    window.addEventListener('resize', adjust);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timeoutId);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', adjust);
+      }
+      window.removeEventListener('resize', adjust);
+
+      // Clean up inline styles so CSS fallback works next time
+      if (el) {
+        el.style.height = '';
+        el.style.bottom = '';
+      }
+    };
+  }, [open]);
 
   useEffect(() => {
     if (running) {
@@ -505,14 +557,15 @@ export default function ToolsSheet({ open, onClose }) {
           }}
         >
 <div
+  ref={cardRef}
   onClick={(e) => e.stopPropagation()}
   className="card"
   style={{
-    // anchor to both top and bottom so sheet is always flush to bottom
+    // keep it fixed and flush to bottom by default (JS may later set explicit height)
     position: 'fixed',
     left: 8,
     right: 8,
-    bottom: -20,
+    bottom: 0, // no negative hack anymore
 
     // ensure it's above the overlay and other UI
     zIndex: 999999,
