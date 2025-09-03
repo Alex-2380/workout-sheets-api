@@ -508,24 +508,24 @@ export default function ToolsSheet({ open, onClose }) {
   onClick={(e) => e.stopPropagation()}
   className="card"
   style={{
-    // make the sheet *fixed* to the bottom so it ALWAYS touches the device bottom
+    // anchor to both top and bottom so sheet is always flush to bottom
     position: 'fixed',
     left: 8,
     right: 8,
-    bottom: 0,
+    bottom: -20,
 
-    // keep a very-high z-index so the card is above the overlay
+    // ensure it's above the overlay and other UI
     zIndex: 999999,
 
     maxWidth: 980,
-    margin: '0 auto',                 // center horizontally
+    margin: '0 auto',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
 
-    // Put safe-area inset into the inner padding so content doesn't overlap home indicator
-    paddingBottom: `calc(18px + env(safe-area-inset-bottom, 0px))`,
+    // allow content to avoid the home-indicator / safe area
+    paddingBottom: `calc(38px + env(safe-area-inset-bottom, 0px))`,
     paddingTop: 12,
     paddingLeft: 12,
     paddingRight: 12,
@@ -533,10 +533,7 @@ export default function ToolsSheet({ open, onClose }) {
     overflow: 'auto',
     boxSizing: 'border-box',
 
-    // allow the sheet to expand to almost-full-screen but leave a little top gap
-    // (adjust the "84px" if your header is taller/shorter — smaller value => taller sheet)
-    maxHeight: 'calc(min(100dvh, 100vh) - 84px)',
-
+    // keep scroll smooth on iOS
     WebkitOverflowScrolling: 'touch'
   }}
 >
