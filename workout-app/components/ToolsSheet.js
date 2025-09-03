@@ -287,12 +287,10 @@ function PlateCalculator() {
   );
 }
 
-/* ---------- Rest timer controls (now with toggles) ---------- */
+/* ---------- Rest timer controls (no toggles visible) ---------- */
 function RestTimerControls({
   presetSeconds, leftSeconds, running,
-  keepAwake, notificationsEnabled,
-  onAddSeconds, onStart, onPause, onReset,
-  onToggleKeepAwake, onToggleNotifications
+  onAddSeconds, onStart, onPause, onReset
 }) {
   const presetM = Math.floor(presetSeconds / 60);
   const presetS = (presetSeconds % 60).toString().padStart(2, '0');
@@ -319,16 +317,8 @@ function RestTimerControls({
         <strong style={{ fontSize: 20, color: 'var(--secondary)' }}>{mins}:{secs}</strong>
       </div>
 
-      {/* Toggles */}
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input type="checkbox" checked={keepAwake} onChange={onToggleKeepAwake} />
-          <span>Keep screen awake</span>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input type="checkbox" checked={notificationsEnabled} onChange={onToggleNotifications} />
-          <span>Notify on finish</span>
-        </label>
+        {/* no checkboxes here (per request) */}
       </div>
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 4 }}>
@@ -343,7 +333,7 @@ function RestTimerControls({
   );
 }
 
-/* ---------- ToolsSheet main (deadline-based timer + wake lock + notifications) ---------- */
+/* ---------- ToolsSheet main (deadline-based timer + notifications default ON) ---------- */
 export default function ToolsSheet({ open, onClose }) {
   const [tab, setTab] = useState('timer');
 
@@ -351,16 +341,14 @@ export default function ToolsSheet({ open, onClose }) {
   const [leftSeconds, setLeftSeconds] = useState(0);
   const [running, setRunning] = useState(false);
 
-  const [keepAwake, setKeepAwake] = useState(false);
-  const wakeLockRef = useRef(null);
-
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  // Notifications are automatically enabled by default (no UI toggle)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const tickRef = useRef(null);
   const endAtRef = useRef(null);          // absolute epoch ms when timer should end
   const finishedNotifiedRef = useRef(false);
 
-  /* ---------- helpers: storage / wake lock / notifications ---------- */
+  /* ---------- helpers: storage / notifications ---------- */
   const STORAGE_KEY = 'restTimerState_v2';
   function persistState() {
     try {
@@ -368,7 +356,6 @@ export default function ToolsSheet({ open, onClose }) {
         presetSeconds,
         running,
         endAt: endAtRef.current,
-        keepAwake,
         notificationsEnabled
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -380,7 +367,6 @@ export default function ToolsSheet({ open, onClose }) {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (typeof parsed.presetSeconds === 'number') setPresetSeconds(parsed.presetSeconds);
-      if (typeof parsed.keepAwake === 'boolean') setKeepAwake(parsed.keepAwake);
       if (typeof parsed.notificationsEnabled === 'boolean') setNotificationsEnabled(parsed.notificationsEnabled);
 
       if (parsed.endAt && parsed.running) {
@@ -391,29 +377,6 @@ export default function ToolsSheet({ open, onClose }) {
         finishedNotifiedRef.current = false;
       }
     } catch {}
-  }
-
-  async function requestWakeLockIfNeeded() {
-    if (!keepAwake || !running) return;
-    try {
-      if ('wakeLock' in navigator && !wakeLockRef.current) {
-        wakeLockRef.current = await navigator.wakeLock.request('screen');
-        wakeLockRef.current.addEventListener?.('release', () => {
-          wakeLockRef.current = null;
-        });
-      }
-    } catch (e) {
-      // Some browsers reject if not visible or permission not granted
-      console.warn('WakeLock request failed', e);
-    }
-  }
-  async function releaseWakeLock() {
-    try {
-      if (wakeLockRef.current) {
-        await wakeLockRef.current.release();
-      }
-    } catch {}
-    wakeLockRef.current = null;
   }
 
   async function ensureNotificationPermission() {
@@ -432,19 +395,33 @@ export default function ToolsSheet({ open, onClose }) {
       const ok = await ensureNotificationPermission();
       if (!ok) return;
 
-      // Prefer SW registration if available
-      const reg = await (navigator.serviceWorker?.ready ?? Promise.resolve(null));
+      // Use a unique tag to avoid grouping with previous notifications (helps them surface as new)
+      const uniqueTag = `rest-timer-finished-${Date.now()}`;
+
       const options = {
         body: 'Time to lift!',
         vibrate: [150, 100, 150],
-        tag: 'rest-timer-finished',
-        renotify: true
+        tag: uniqueTag,
+        renotify: false,
+        requireInteraction: true, // keep it visible until the user interacts (where supported)
+        silent: false,
+        // replace with your real icon / badge paths if available
+        icon: '/icons/notification-192.png',
+        badge: '/icons/notification-badge.png',
+        data: { url: window.location.href },
+        actions: [{ action: 'open', title: 'Open App' }]
       };
 
+      // Prefer service worker showNotification if available (works when page is backgrounded)
+      const reg = await (navigator.serviceWorker?.ready ?? Promise.resolve(null));
       if (reg?.showNotification) {
-        await reg.showNotification('Rest finished', options);
+        try {
+          await reg.showNotification('Rest finished', options);
+        } catch (err) {
+          // fallback to page notification if SW showNotification fails
+          new Notification('Rest finished', options);
+        }
       } else if ('Notification' in window) {
-        // Page context fallback
         new Notification('Rest finished', options);
       }
 
@@ -458,13 +435,19 @@ export default function ToolsSheet({ open, onClose }) {
   useEffect(() => {
     loadState();
 
-    // page lifecycle: recalc when we come back; re-request wake lock if needed
+    // Try to request permission on load if permission is still 'default' (user asked for automatic)
+    (async () => {
+      try {
+        if ('Notification' in window && Notification.permission === 'default') {
+          // best-effort request — some browsers require a user gesture and will ignore/block the prompt
+          await ensureNotificationPermission();
+        }
+      } catch (e) { /* ignore */ }
+    })();
+
+    // page lifecycle: recompute when we come back and handle finishing
     function onVisibility() {
       if (document.visibilityState === 'visible') {
-        if (running) {
-          // re-request wake lock (browsers release it on hide)
-          requestWakeLockIfNeeded();
-        }
         // recompute remaining from endAt
         if (endAtRef.current) {
           const remain = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
@@ -480,8 +463,6 @@ export default function ToolsSheet({ open, onClose }) {
             postFinishNotification();
           }
         }
-      } else {
-        // When hidden, browsers may release wake lock automatically
       }
     }
 
@@ -497,12 +478,11 @@ export default function ToolsSheet({ open, onClose }) {
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('pagehide', onPageHide);
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
-      releaseWakeLock();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { persistState(); }, [presetSeconds, keepAwake, notificationsEnabled]);
+  useEffect(() => { persistState(); }, [presetSeconds, notificationsEnabled]);
 
   useEffect(() => {
     // Start/update ticking loop: uses deadline math (endAtRef) so it stays accurate
@@ -527,10 +507,8 @@ export default function ToolsSheet({ open, onClose }) {
           postFinishNotification();
         }
       }, 250); // UI feels snappy; accuracy is from Date.now()
-      requestWakeLockIfNeeded();
     } else {
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
-      releaseWakeLock();
     }
 
     return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
@@ -560,8 +538,10 @@ export default function ToolsSheet({ open, onClose }) {
     finishedNotifiedRef.current = false;
     setRunning(true);
     setTab('timer');
+
+    // try to ensure permission at start as well (best-effort)
     if (notificationsEnabled) { await ensureNotificationPermission(); }
-    requestWakeLockIfNeeded();
+
     persistState();
   }
 
@@ -573,7 +553,6 @@ export default function ToolsSheet({ open, onClose }) {
     setRunning(false);
     endAtRef.current = null;
     finishedNotifiedRef.current = false;
-    releaseWakeLock();
     persistState();
   }
 
@@ -582,7 +561,6 @@ export default function ToolsSheet({ open, onClose }) {
     setLeftSeconds(0);
     endAtRef.current = null;
     finishedNotifiedRef.current = false;
-    releaseWakeLock();
     persistState();
   }
 
@@ -672,39 +650,10 @@ export default function ToolsSheet({ open, onClose }) {
                   presetSeconds={presetSeconds}
                   leftSeconds={leftSeconds}
                   running={running}
-                  keepAwake={keepAwake}
-                  notificationsEnabled={notificationsEnabled}
                   onAddSeconds={handleAddSeconds}
                   onStart={handleStart}
                   onPause={handlePause}
                   onReset={handleReset}
-                  onToggleKeepAwake={async () => {
-                    setKeepAwake(v => !v);
-                    // If enabling while running and visible, request immediately
-                    const next = !keepAwake;
-                    if (next && running && document.visibilityState === 'visible') {
-                      await requestWakeLockIfNeeded();
-                    } else if (!next) {
-                      await releaseWakeLock();
-                    }
-                    persistState();
-                  }}
-                  onToggleNotifications={async () => {
-                    const next = !notificationsEnabled;
-                    setNotificationsEnabled(next);
-                    if (next) {
-                      const ok = await ensureNotificationPermission();
-                      if (!ok) {
-                        setNotificationsEnabled(false);
-                        showToast('Notifications blocked', { duration: 1800, variant: 'error' });
-                      } else {
-                        showToast('Notifications enabled', { duration: 1200 });
-                      }
-                    } else {
-                      showToast('Notifications disabled', { duration: 1200 });
-                    }
-                    persistState();
-                  }}
                 />
               )}
               {tab === 'plates' && <PlateCalculator />}
