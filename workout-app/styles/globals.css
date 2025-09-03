@@ -390,7 +390,6 @@ select {
 .sheet-body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); /* room for sticky actions */
   -webkit-overflow-scrolling: touch;
 }
 
