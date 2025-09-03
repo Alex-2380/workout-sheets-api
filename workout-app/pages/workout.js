@@ -711,7 +711,7 @@ const lastByExercise = useMemo(() => {
 
               {/* Achievements inside the same scroll */}
               {achievements.length > 0 && (
-                <div className="card achievements" style={{ padding: 12, marginBottom: 8, paddingbottom: 50 }}>
+                <div className="card achievements" style={{ padding: 12, marginBottom: 100 }}>
                   <div className="h2" style={{ margin: 0 }}>Achievements</div>
                   <div className="divider" />
                   <ul className="clean-list" style={{ marginTop: 4 }}>
