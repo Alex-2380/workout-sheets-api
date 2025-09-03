@@ -504,29 +504,43 @@ export default function ToolsSheet({ open, onClose }) {
             backdropFilter: 'blur(3px)'
           }}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="card"
-            style={{
-              width: '100%',
-              maxWidth: 980,
-              margin: '0 8px 0 8px',
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
-              // ensure the sheet can extend into the home-indicator area and not leave a black gap
-              paddingBottom: `calc(18px + env(safe-area-inset-bottom, 0px))`,
-              paddingTop: 12,
-              paddingLeft: 12,
-              paddingRight: 12,
-              overflow: 'auto',
-              boxSizing: 'border-box',
-              // prefer the dynamic viewport when available, fallback to regular vh
-              maxHeight: 'calc(min(100dvh, 100vh) - 84px)',
-              WebkitOverflowScrolling: 'touch'
-            }}
-          >
+<div
+  onClick={(e) => e.stopPropagation()}
+  className="card"
+  style={{
+    // make the sheet *fixed* to the bottom so it ALWAYS touches the device bottom
+    position: 'fixed',
+    left: 8,
+    right: 8,
+    bottom: 0,
+
+    // keep a very-high z-index so the card is above the overlay
+    zIndex: 999999,
+
+    maxWidth: 980,
+    margin: '0 auto',                 // center horizontally
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+
+    // Put safe-area inset into the inner padding so content doesn't overlap home indicator
+    paddingBottom: `calc(18px + env(safe-area-inset-bottom, 0px))`,
+    paddingTop: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
+
+    overflow: 'auto',
+    boxSizing: 'border-box',
+
+    // allow the sheet to expand to almost-full-screen but leave a little top gap
+    // (adjust the "84px" if your header is taller/shorter — smaller value => taller sheet)
+    maxHeight: 'calc(min(100dvh, 100vh) - 84px)',
+
+    WebkitOverflowScrolling: 'touch'
+  }}
+>
+
             {/* header tabs */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '0 6px 8px 6px', marginBottom: 6 }}>
               <button
