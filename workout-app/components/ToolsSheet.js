@@ -38,11 +38,8 @@ function showToast(message, { duration = 1600, variant = 'info' } = {}) {
     document.body.appendChild(root);
   }
 
-  // read current theme vars so toast matches instantly
   const vars = readThemeVars();
   const isLight = vars.theme === 'light';
-
-  // visual choices by theme
   const bg = isLight ? vars.panel : 'rgba(0,0,0,0.82)';
   const txt = vars.text;
   const borderColor = variant === 'error' ? vars.danger : vars.accent;
@@ -68,13 +65,11 @@ function showToast(message, { duration = 1600, variant = 'info' } = {}) {
   el.textContent = message;
   root.appendChild(el);
 
-  // animate in
   requestAnimationFrame(() => {
     el.style.opacity = '1';
     el.style.transform = 'translateY(0) scale(1)';
   });
 
-  // remove after duration
   setTimeout(() => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(-6px) scale(.98)';
@@ -102,21 +97,14 @@ function OneRepMaxCalculator() {
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const [rows, setRows] = useState([]);
-
   const epley = (w, r) => w * (1 + (r / 30));
 
   function calc() {
     const w = parseFloat(String(weight || '0'));
     const r = parseInt(String(reps || '0'), 10);
-    if (!w || !r) {
-      setRows([]);
-      return;
-    }
+    if (!w || !r) { setRows([]); return; }
     const one = epley(w, r);
-    const out = PERCENTAGE_ROWS.map(pr => ({
-      ...pr,
-      computedWeight: Math.round(one * pr.pct)
-    }));
+    const out = PERCENTAGE_ROWS.map(pr => ({ ...pr, computedWeight: Math.round(one * pr.pct) }));
     setRows(out);
   }
 
@@ -124,37 +112,22 @@ function OneRepMaxCalculator() {
     setWeight('');
     setReps('');
     setRows([]);
-    // small feedback so user knows it cleared
     showToast('Cleared', { duration: 900 });
   }
 
   return (
     <div className="grid">
       <div className="grid-2" style={{ gap: 8 }}>
-        <input
-          placeholder="Weight"
-          inputMode="decimal"
-          value={weight}
-          onChange={e => setWeight(e.target.value)}
-          style={{ width: '100%' }}
-        />
-        <input
-          placeholder="Reps"
-          inputMode="numeric"
-          value={reps}
-          onChange={e => setReps(e.target.value)}
-          style={{ width: '100%' }}
-        />
+        <input placeholder="Weight" inputMode="decimal" value={weight} onChange={e => setWeight(e.target.value)} style={{ width: '100%' }} />
+        <input placeholder="Reps" inputMode="numeric" value={reps} onChange={e => setReps(e.target.value)} style={{ width: '100%' }} />
       </div>
 
-      {/* calculate + clear side-by-side */}
       <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
         <button className="primary" onClick={calc} style={{ flex: 1 }}>Calculate</button>
         <button className="ghost" onClick={clearCalc} style={{ minWidth: 96 }}>Clear</button>
       </div>
 
       <div className="card" style={{ padding: 8, marginTop: 12 }}>
-        {/* header row — only shown after calculation; uses secondary */}
         {rows.length > 0 && (
           <div style={{
             display: 'grid',
@@ -169,9 +142,7 @@ function OneRepMaxCalculator() {
             marginBottom: 8,
             textAlign: 'center'
           }}>
-            <div>Percentage</div>
-            <div>Weight</div>
-            <div>Reps</div>
+            <div>Percentage</div><div>Weight</div><div>Reps</div>
           </div>
         )}
 
@@ -233,7 +204,6 @@ function PlateCalculator() {
 
   const gap = 8;
   const widthCalc = `calc((100% - ${gap * (plates.length - 1)}px) / ${plates.length})`;
-
   const eachSide = plates.reduce((sum, p) => sum + p * (counts[p] || 0), 0);
   const total = bar + 2 * eachSide;
 
@@ -317,13 +287,17 @@ function PlateCalculator() {
   );
 }
 
-/* ---------- Rest timer controls (unchanged) ---------- */
-function RestTimerControls({ presetSeconds, leftSeconds, running, onAddSeconds, onStart, onPause, onReset }) {
+/* ---------- Rest timer controls (now with toggles) ---------- */
+function RestTimerControls({
+  presetSeconds, leftSeconds, running,
+  keepAwake, notificationsEnabled,
+  onAddSeconds, onStart, onPause, onReset,
+  onToggleKeepAwake, onToggleNotifications
+}) {
   const presetM = Math.floor(presetSeconds / 60);
   const presetS = (presetSeconds % 60).toString().padStart(2, '0');
   const mins = Math.floor(leftSeconds / 60).toString().padStart(2, '0');
   const secs = (leftSeconds % 60).toString().padStart(2, '0');
-
   const actionButtonStyle = { minWidth: 120, padding: '10px 14px' };
 
   return (
@@ -345,6 +319,18 @@ function RestTimerControls({ presetSeconds, leftSeconds, running, onAddSeconds, 
         <strong style={{ fontSize: 20, color: 'var(--secondary)' }}>{mins}:{secs}</strong>
       </div>
 
+      {/* Toggles */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input type="checkbox" checked={keepAwake} onChange={onToggleKeepAwake} />
+          <span>Keep screen awake</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input type="checkbox" checked={notificationsEnabled} onChange={onToggleNotifications} />
+          <span>Notify on finish</span>
+        </label>
+      </div>
+
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 4 }}>
         {!running ? (
           <button className="primary" onClick={onStart} style={actionButtonStyle}>Start</button>
@@ -357,56 +343,208 @@ function RestTimerControls({ presetSeconds, leftSeconds, running, onAddSeconds, 
   );
 }
 
-/* ---------- ToolsSheet main (timer first) ---------- */
+/* ---------- ToolsSheet main (deadline-based timer + wake lock + notifications) ---------- */
 export default function ToolsSheet({ open, onClose }) {
   const [tab, setTab] = useState('timer');
 
   const [presetSeconds, setPresetSeconds] = useState(120);
   const [leftSeconds, setLeftSeconds] = useState(0);
   const [running, setRunning] = useState(false);
+
+  const [keepAwake, setKeepAwake] = useState(false);
+  const wakeLockRef = useRef(null);
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
   const tickRef = useRef(null);
+  const endAtRef = useRef(null);          // absolute epoch ms when timer should end
   const finishedNotifiedRef = useRef(false);
 
+  /* ---------- helpers: storage / wake lock / notifications ---------- */
+  const STORAGE_KEY = 'restTimerState_v2';
+  function persistState() {
+    try {
+      const data = {
+        presetSeconds,
+        running,
+        endAt: endAtRef.current,
+        keepAwake,
+        notificationsEnabled
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {}
+  }
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (typeof parsed.presetSeconds === 'number') setPresetSeconds(parsed.presetSeconds);
+      if (typeof parsed.keepAwake === 'boolean') setKeepAwake(parsed.keepAwake);
+      if (typeof parsed.notificationsEnabled === 'boolean') setNotificationsEnabled(parsed.notificationsEnabled);
+
+      if (parsed.endAt && parsed.running) {
+        endAtRef.current = parsed.endAt;
+        const remain = Math.max(0, Math.ceil((parsed.endAt - Date.now()) / 1000));
+        setLeftSeconds(remain);
+        setRunning(remain > 0);
+        finishedNotifiedRef.current = false;
+      }
+    } catch {}
+  }
+
+  async function requestWakeLockIfNeeded() {
+    if (!keepAwake || !running) return;
+    try {
+      if ('wakeLock' in navigator && !wakeLockRef.current) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        wakeLockRef.current.addEventListener?.('release', () => {
+          wakeLockRef.current = null;
+        });
+      }
+    } catch (e) {
+      // Some browsers reject if not visible or permission not granted
+      console.warn('WakeLock request failed', e);
+    }
+  }
+  async function releaseWakeLock() {
+    try {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release();
+      }
+    } catch {}
+    wakeLockRef.current = null;
+  }
+
+  async function ensureNotificationPermission() {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    try {
+      const res = await Notification.requestPermission();
+      return res === 'granted';
+    } catch { return false; }
+  }
+
+  async function postFinishNotification() {
+    try {
+      if (!notificationsEnabled) return;
+      const ok = await ensureNotificationPermission();
+      if (!ok) return;
+
+      // Prefer SW registration if available
+      const reg = await (navigator.serviceWorker?.ready ?? Promise.resolve(null));
+      const options = {
+        body: 'Time to lift!',
+        vibrate: [150, 100, 150],
+        tag: 'rest-timer-finished',
+        renotify: true
+      };
+
+      if (reg?.showNotification) {
+        await reg.showNotification('Rest finished', options);
+      } else if ('Notification' in window) {
+        // Page context fallback
+        new Notification('Rest finished', options);
+      }
+
+      try { if (navigator?.vibrate) navigator.vibrate([150, 100, 150]); } catch {}
+    } catch (e) {
+      console.warn('Notification error', e);
+    }
+  }
+
+  /* ---------- effects: init / cleanup ---------- */
   useEffect(() => {
+    loadState();
+
+    // page lifecycle: recalc when we come back; re-request wake lock if needed
+    function onVisibility() {
+      if (document.visibilityState === 'visible') {
+        if (running) {
+          // re-request wake lock (browsers release it on hide)
+          requestWakeLockIfNeeded();
+        }
+        // recompute remaining from endAt
+        if (endAtRef.current) {
+          const remain = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+          setLeftSeconds(remain);
+          if (remain <= 0 && running && !finishedNotifiedRef.current) {
+            finishedNotifiedRef.current = true;
+            setRunning(false);
+            endAtRef.current = null;
+            persistState();
+            // Fire completion
+            try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
+            showToast('Timer finished!', { duration: 2200, variant: 'info' });
+            postFinishNotification();
+          }
+        }
+      } else {
+        // When hidden, browsers may release wake lock automatically
+      }
+    }
+
+    function onPageShow() { onVisibility(); }
+    function onPageHide() { /* nothing */ }
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('pagehide', onPageHide);
+
     return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('pagehide', onPageHide);
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+      releaseWakeLock();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (running) finishedNotifiedRef.current = false;
-  }, [running]);
+  useEffect(() => { persistState(); }, [presetSeconds, keepAwake, notificationsEnabled]);
 
   useEffect(() => {
-    if (running) {
-      setLeftSeconds(prev => (prev > 0 ? prev : presetSeconds));
+    // Start/update ticking loop: uses deadline math (endAtRef) so it stays accurate
+    if (running && endAtRef.current) {
+      finishedNotifiedRef.current = false;
+
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
-
       tickRef.current = setInterval(() => {
-        setLeftSeconds(prev => {
-          if (prev <= 1) {
-            if (!finishedNotifiedRef.current) {
-              finishedNotifiedRef.current = true;
-              showToast('Timer finished!', { duration: 2200, variant: 'info' });
-              try { if (navigator?.vibrate) navigator.vibrate(250); } catch(e) {}
-              try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
-            }
-            if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
-            setRunning(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+        const remain = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+        setLeftSeconds(remain);
+
+        if (remain <= 0 && !finishedNotifiedRef.current) {
+          finishedNotifiedRef.current = true;
+          if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+          setRunning(false);
+          endAtRef.current = null;
+          persistState();
+
+          showToast('Timer finished!', { duration: 2200, variant: 'info' });
+          try { if (navigator?.vibrate) navigator.vibrate(250); } catch {}
+          try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
+          postFinishNotification();
+        }
+      }, 250); // UI feels snappy; accuracy is from Date.now()
+      requestWakeLockIfNeeded();
     } else {
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+      releaseWakeLock();
     }
+
     return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, presetSeconds]);
+  }, [running]);
 
+  /* ---------- event handlers ---------- */
   function handleAddSeconds(delta) {
-    if (running || leftSeconds > 0) {
+    if (running && endAtRef.current) {
+      endAtRef.current = endAtRef.current + (delta * 1000);
+      const remain = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+      setLeftSeconds(remain);
+      persistState();
+    } else if (leftSeconds > 0) {
       setLeftSeconds(prev => Math.max(0, prev + delta));
     } else {
       setPresetSeconds(prev => Math.max(0, prev + delta));
@@ -414,36 +552,43 @@ export default function ToolsSheet({ open, onClose }) {
   }
 
   async function handleStart() {
-    // IMPORTANT: Unlock/resume AudioContext during the user gesture so later playback is allowed on iOS/PWA.
-    try {
-      // ensureAudioContext may resume a suspended context; it's OK if utils/sound handles absence gracefully
-      ensureAudioContext();
-    } catch (e) {
-      // non-fatal; continue anyway
-      console.warn('ensureAudioContext failed', e);
-    }
+    try { ensureAudioContext(); } catch (e) { console.warn('ensureAudioContext failed', e); }
 
-    setLeftSeconds(l => (l <= 0 ? presetSeconds : l));
+    const base = leftSeconds > 0 ? leftSeconds : presetSeconds;
+    endAtRef.current = Date.now() + Math.max(0, base) * 1000;
+    setLeftSeconds(base);
     finishedNotifiedRef.current = false;
     setRunning(true);
     setTab('timer');
+    if (notificationsEnabled) { await ensureNotificationPermission(); }
+    requestWakeLockIfNeeded();
+    persistState();
   }
-  function handlePause() { setRunning(false); }
+
+  function handlePause() {
+    if (running && endAtRef.current) {
+      const remain = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+      setLeftSeconds(remain);
+    }
+    setRunning(false);
+    endAtRef.current = null;
+    finishedNotifiedRef.current = false;
+    releaseWakeLock();
+    persistState();
+  }
+
   function handleReset() {
     setRunning(false);
     setLeftSeconds(0);
+    endAtRef.current = null;
     finishedNotifiedRef.current = false;
+    releaseWakeLock();
+    persistState();
   }
+
+  function overlayClick() { if (typeof onClose === 'function') onClose(); }
 
   const showFloating = !open && running;
-
-  function overlayClick() {
-    if (typeof onClose === 'function') onClose();
-  }
-
-  if (!open && !running) return null;
-
-  // read theme vars now so floating mini uses correct text color immediately
   const vars = readThemeVars();
   const isLight = vars.theme === 'light';
 
@@ -461,7 +606,7 @@ export default function ToolsSheet({ open, onClose }) {
             transform: 'translateX(-50%)',
             zIndex: 999999,
             background: 'var(--secondary)',
-            color: 'var(--textmod)', // reverted to use your --textmod variable as requested
+            color: 'var(--textmod)',
             padding: '8px 14px',
             borderRadius: 999,
             boxShadow: isLight ? '0 8px 24px rgba(10,10,10,0.06)' : '0 8px 28px rgba(0,0,0,0.35)',
@@ -493,66 +638,32 @@ export default function ToolsSheet({ open, onClose }) {
             backdropFilter: 'blur(3px)'
           }}
         >
-<div
-  onClick={(e) => e.stopPropagation()}
-  className="card"
-  style={{
-    // anchor to both top and bottom so sheet is always flush to bottom
-    position: 'fixed',
-    left: 8,
-    right: 8,
-    bottom: -20,
-
-    // ensure it's above the overlay and other UI
-    zIndex: 999999,
-
-    maxWidth: 980,
-    margin: '0 auto',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-
-    // allow content to avoid the home-indicator / safe area
-    paddingBottom: `calc(38px + env(safe-area-inset-bottom, 0px))`,
-    paddingTop: 12,
-    paddingLeft: 12,
-    paddingRight: 12,
-
-    overflow: 'auto',
-    boxSizing: 'border-box',
-    maxHeight: 'calc(min(100dvh, 100vh) - 110px)',
-
-    // keep scroll smooth on iOS
-    WebkitOverflowScrolling: 'touch'
-  }}
->
-
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card"
+            style={{
+              position: 'fixed',
+              left: 8, right: 8, bottom: -20,
+              zIndex: 999999,
+              maxWidth: 980,
+              margin: '0 auto',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+              paddingBottom: `calc(38px + env(safe-area-inset-bottom, 0px))`,
+              paddingTop: 12, paddingLeft: 12, paddingRight: 12,
+              overflow: 'auto',
+              boxSizing: 'border-box',
+              maxHeight: 'calc(min(100dvh, 100vh) - 110px)',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
             {/* header tabs */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '0 6px 8px 6px', marginBottom: 6 }}>
-              <button
-                className="ghost"
-                onClick={() => setTab('timer')}
-                style={{ flex: 1, borderColor: tab === 'timer' ? 'var(--accent)' : undefined }}
-              >
-                Timer
-              </button>
-
-              <button
-                className="ghost"
-                onClick={() => setTab('plates')}
-                style={{ flex: 1, borderColor: tab === 'plates' ? 'var(--accent)' : undefined }}
-              >
-                Plates
-              </button>
-
-              <button
-                className="ghost"
-                onClick={() => setTab('1rm')}
-                style={{ flex: 1, borderColor: tab === '1rm' ? 'var(--accent)' : undefined }}
-              >
-                1RM
-              </button>
+              <button className="ghost" onClick={() => setTab('timer')}  style={{ flex: 1, borderColor: tab === 'timer' ? 'var(--accent)' : undefined }}>Timer</button>
+              <button className="ghost" onClick={() => setTab('plates')} style={{ flex: 1, borderColor: tab === 'plates' ? 'var(--accent)' : undefined }}>Plates</button>
+              <button className="ghost" onClick={() => setTab('1rm')}   style={{ flex: 1, borderColor: tab === '1rm' ? 'var(--accent)' : undefined }}>1RM</button>
             </div>
 
             <div style={{ padding: '4px 6px 6px 6px' }}>
@@ -561,10 +672,39 @@ export default function ToolsSheet({ open, onClose }) {
                   presetSeconds={presetSeconds}
                   leftSeconds={leftSeconds}
                   running={running}
+                  keepAwake={keepAwake}
+                  notificationsEnabled={notificationsEnabled}
                   onAddSeconds={handleAddSeconds}
                   onStart={handleStart}
                   onPause={handlePause}
                   onReset={handleReset}
+                  onToggleKeepAwake={async () => {
+                    setKeepAwake(v => !v);
+                    // If enabling while running and visible, request immediately
+                    const next = !keepAwake;
+                    if (next && running && document.visibilityState === 'visible') {
+                      await requestWakeLockIfNeeded();
+                    } else if (!next) {
+                      await releaseWakeLock();
+                    }
+                    persistState();
+                  }}
+                  onToggleNotifications={async () => {
+                    const next = !notificationsEnabled;
+                    setNotificationsEnabled(next);
+                    if (next) {
+                      const ok = await ensureNotificationPermission();
+                      if (!ok) {
+                        setNotificationsEnabled(false);
+                        showToast('Notifications blocked', { duration: 1800, variant: 'error' });
+                      } else {
+                        showToast('Notifications enabled', { duration: 1200 });
+                      }
+                    } else {
+                      showToast('Notifications disabled', { duration: 1200 });
+                    }
+                    persistState();
+                  }}
                 />
               )}
               {tab === 'plates' && <PlateCalculator />}
