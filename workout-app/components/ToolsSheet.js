@@ -140,6 +140,14 @@ function OneRepMaxCalculator() {
     setRows(out);
   }
 
+  function clearCalc() {
+    setWeight('');
+    setReps('');
+    setRows([]);
+    // small feedback so user knows it cleared
+    showToast('Cleared', { duration: 900 });
+  }
+
   return (
     <div className="grid">
       <div className="grid-2" style={{ gap: 8 }}>
@@ -159,8 +167,10 @@ function OneRepMaxCalculator() {
         />
       </div>
 
-      <div style={{ marginTop: 10 }}>
-        <button className="primary" onClick={calc} style={{ width: '100%' }}>Calculate</button>
+      {/* calculate + clear side-by-side */}
+      <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+        <button className="primary" onClick={calc} style={{ flex: 1 }}>Calculate</button>
+        <button className="ghost" onClick={clearCalc} style={{ minWidth: 96 }}>Clear</button>
       </div>
 
       <div className="card" style={{ padding: 8, marginTop: 12 }}>
@@ -352,7 +362,7 @@ function RestTimerControls({ presetSeconds, leftSeconds, running, onAddSeconds, 
 
       <div className="kpi" style={{ fontSize: 18 }}>
         <span>Time Left</span>
-        <strong style={{ fontSize: 20 }}>{mins}:{secs}</strong>
+        <strong style={{ fontSize: 20, color: 'var(--secondary)' }}>{mins}:{secs}</strong>
       </div>
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 4 }}>
@@ -395,12 +405,12 @@ export default function ToolsSheet({ open, onClose }) {
       tickRef.current = setInterval(() => {
         setLeftSeconds(prev => {
           if (prev <= 1) {
-if (!finishedNotifiedRef.current) {
-  finishedNotifiedRef.current = true;
-  showToast('Timer finished!', { duration: 2200, variant: 'info' });
-  if (navigator?.vibrate) navigator.vibrate(250);
-  playBeep(440, 400, 0.5); // frequency 440Hz, 400ms, medium volume
-}
+            if (!finishedNotifiedRef.current) {
+              finishedNotifiedRef.current = true;
+              showToast('Timer finished!', { duration: 2200, variant: 'info' });
+              if (navigator?.vibrate) navigator.vibrate(250);
+              playBeep(440, 400, 0.5); // frequency 440Hz, 400ms, medium volume
+            }
             if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
             setRunning(false);
             return 0;
@@ -500,18 +510,21 @@ if (!finishedNotifiedRef.current) {
             style={{
               width: '100%',
               maxWidth: 980,
-              margin: '0 8px',
+              margin: '0 8px 0 8px',
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               borderBottomLeftRadius: 0,
               borderBottomRightRadius: 0,
-              paddingBottom: 18,
+              // ensure the sheet can extend into the home-indicator area and not leave a black gap
+              paddingBottom: `calc(18px + env(safe-area-inset-bottom, 0px))`,
               paddingTop: 12,
               paddingLeft: 12,
               paddingRight: 12,
               overflow: 'auto',
               boxSizing: 'border-box',
-              maxHeight: 'calc(100vh - 84px)'
+              // prefer the dynamic viewport when available, fallback to regular vh
+              maxHeight: 'calc(min(100dvh, 100vh) - 84px)',
+              WebkitOverflowScrolling: 'touch'
             }}
           >
             {/* header tabs */}
