@@ -384,7 +384,7 @@ select {
   border-radius: 14px 14px 0 0;
   box-shadow: 0 -28px 64px rgba(0,0,0,0.6);
   padding: 16px;
-  overflow: hidden;              /* only .sheet-body scrolls */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .sheet-body {
