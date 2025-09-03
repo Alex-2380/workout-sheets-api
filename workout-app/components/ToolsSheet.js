@@ -178,7 +178,7 @@ function PlateCalculator() {
   const pendingTimers = useRef({});
 
   function incrementPlate(p) { setCounts(prev => ({ ...prev, [p]: (prev[p] || 0) + 1 })); }
-  function decrementPlate(p) { setCounts(prev => ({ ...prev, [p]: Math.max(0, (prev[p] || 0) - 1 })); }
+  function decrementPlate(p) { setCounts(prev => ({ ...prev, [p]: Math.max(0, (prev[p] || 0) - 1) })); }
 
   function handlePointerUp(p, e) {
     if (e && e.pointerType === 'mouse' && (e.button ?? 0) !== 0) return;
@@ -287,7 +287,7 @@ function PlateCalculator() {
   );
 }
 
-/* ---------- Rest timer controls (no toggles visible) ---------- */
+/* ---------- Rest timer controls (checkboxes removed) ---------- */
 function RestTimerControls({
   presetSeconds, leftSeconds, running,
   onAddSeconds, onStart, onPause, onReset
@@ -317,10 +317,6 @@ function RestTimerControls({
         <strong style={{ fontSize: 20, color: 'var(--secondary)' }}>{mins}:{secs}</strong>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
-        {/* no checkboxes here (per request) */}
-      </div>
-
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 4 }}>
         {!running ? (
           <button className="primary" onClick={onStart} style={actionButtonStyle}>Start</button>
@@ -333,7 +329,7 @@ function RestTimerControls({
   );
 }
 
-/* ---------- ToolsSheet main (deadline-based timer; notifications removed) ---------- */
+/* ---------- ToolsSheet main (deadline-based timer) ---------- */
 export default function ToolsSheet({ open, onClose }) {
   const [tab, setTab] = useState('timer');
 
@@ -344,7 +340,6 @@ export default function ToolsSheet({ open, onClose }) {
   const tickRef = useRef(null);
   const endAtRef = useRef(null);          // absolute epoch ms when timer should end
   const finishedNotifiedRef = useRef(false);
-  const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : '');
 
   /* ---------- helpers: storage ---------- */
   const STORAGE_KEY = 'restTimerState_v2';
@@ -377,12 +372,9 @@ export default function ToolsSheet({ open, onClose }) {
 
   /* ---------- effects: init / cleanup ---------- */
   useEffect(() => {
-    // capture original title
-    try { originalTitleRef.current = document.title || ''; } catch {}
-
     loadState();
 
-    // page lifecycle: recompute when we come back and handle finishing
+    // page lifecycle: recompute remaining when we become visible
     function onVisibility() {
       if (document.visibilityState === 'visible') {
         // recompute remaining from endAt
@@ -394,13 +386,13 @@ export default function ToolsSheet({ open, onClose }) {
             setRunning(false);
             endAtRef.current = null;
             persistState();
-            // Fire completion feedback when user returns
+            // Fire completion actions
             try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
             showToast('Timer finished!', { duration: 2200, variant: 'info' });
-            try { if (navigator?.vibrate) navigator.vibrate(250); } catch {}
-            try { document.title = originalTitleRef.current; } catch {}
           }
         }
+      } else {
+        // nothing special on hide
       }
     }
 
@@ -416,7 +408,6 @@ export default function ToolsSheet({ open, onClose }) {
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('pagehide', onPageHide);
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
-      try { document.title = originalTitleRef.current; } catch {}
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -433,13 +424,6 @@ export default function ToolsSheet({ open, onClose }) {
         const remain = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
         setLeftSeconds(remain);
 
-        // update title for background/tab visibility
-        try {
-          const mm = String(Math.floor(remain / 60)).padStart(2, '0');
-          const ss = String(remain % 60).padStart(2, '0');
-          document.title = remain > 0 ? `${mm}:${ss} • Rest Timer` : originalTitleRef.current;
-        } catch {}
-
         if (remain <= 0 && !finishedNotifiedRef.current) {
           finishedNotifiedRef.current = true;
           if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
@@ -450,12 +434,10 @@ export default function ToolsSheet({ open, onClose }) {
           showToast('Timer finished!', { duration: 2200, variant: 'info' });
           try { if (navigator?.vibrate) navigator.vibrate(250); } catch {}
           try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
-          try { document.title = originalTitleRef.current; } catch {}
         }
       }, 250); // UI feels snappy; accuracy is from Date.now()
     } else {
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
-      try { document.title = originalTitleRef.current; } catch {}
     }
 
     return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
@@ -485,7 +467,6 @@ export default function ToolsSheet({ open, onClose }) {
     finishedNotifiedRef.current = false;
     setRunning(true);
     setTab('timer');
-
     persistState();
   }
 
@@ -498,7 +479,6 @@ export default function ToolsSheet({ open, onClose }) {
     endAtRef.current = null;
     finishedNotifiedRef.current = false;
     persistState();
-    try { document.title = originalTitleRef.current; } catch {}
   }
 
   function handleReset() {
@@ -507,7 +487,6 @@ export default function ToolsSheet({ open, onClose }) {
     endAtRef.current = null;
     finishedNotifiedRef.current = false;
     persistState();
-    try { document.title = originalTitleRef.current; } catch {}
   }
 
   function overlayClick() { if (typeof onClose === 'function') onClose(); }
