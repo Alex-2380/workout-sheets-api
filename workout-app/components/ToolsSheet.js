@@ -1,5 +1,6 @@
 // components/ToolsSheet.js
 import React, { useEffect, useRef, useState } from 'react';
+import { ensureAudioContext, playBeep } from '../utils/sound';
 
 /* ---------- tiny theme helpers ---------- */
 function readThemeVars() {
@@ -15,27 +16,6 @@ function readThemeVars() {
     danger: cs ? cs.getPropertyValue('--danger').trim() : '#ef4444',
     textmod: cs ? cs.getPropertyValue('--textmod').trim() : '' // includes your custom var
   };
-}
-
-function playBeep(frequency = 440, duration = 300, volume = 0.3) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.frequency.value = frequency;
-    oscillator.type = 'sine';
-
-    gainNode.gain.value = volume;
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.start();
-    oscillator.stop(ctx.currentTime + duration / 1000);
-  } catch (e) {
-    console.warn('Beep not supported', e);
-  }
 }
 
 /* ---------- tiny toast helper (theme-aware) ---------- */
@@ -386,7 +366,6 @@ export default function ToolsSheet({ open, onClose }) {
   const [running, setRunning] = useState(false);
   const tickRef = useRef(null);
   const finishedNotifiedRef = useRef(false);
-  const cardRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -397,57 +376,6 @@ export default function ToolsSheet({ open, onClose }) {
   useEffect(() => {
     if (running) finishedNotifiedRef.current = false;
   }, [running]);
-
-  // Ensure the sheet is sized to reach the bottom on first paint (iOS PWA often reports viewport metrics late)
-  useEffect(() => {
-    if (!open) return;
-    const el = cardRef.current;
-    if (!el) return;
-
-    const topGap = 84; // space to keep above the sheet (tweak if you want it closer/further from top)
-    const safety = 2;  // small extra pixels to avoid 1px gaps
-
-    const adjust = () => {
-      try {
-        const vv = window.visualViewport;
-        const vh = (vv && vv.height) ? vv.height : window.innerHeight;
-
-        // Apply explicit height and pin bottom to 0 so it reaches the bottom immediately.
-        el.style.height = `${targetHeight}px`;
-        el.style.bottom = '0px';
-
-        // Force layout read so the UA commits the change.
-        void el.offsetHeight;
-      } catch (e) {
-        // noop - defensive in case of unexpected environment
-      }
-    };
-
-    // Run immediately and a couple more times to catch iOS timing races
-    adjust();
-    const rafId = requestAnimationFrame(adjust);
-    const timeoutId = setTimeout(adjust, 160);
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', adjust);
-    }
-    window.addEventListener('resize', adjust);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      clearTimeout(timeoutId);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', adjust);
-      }
-      window.removeEventListener('resize', adjust);
-
-      // Clean up inline styles so CSS fallback works next time
-      if (el) {
-        el.style.height = '';
-        el.style.bottom = '';
-      }
-    };
-  }, [open]);
 
   useEffect(() => {
     if (running) {
@@ -460,8 +388,8 @@ export default function ToolsSheet({ open, onClose }) {
             if (!finishedNotifiedRef.current) {
               finishedNotifiedRef.current = true;
               showToast('Timer finished!', { duration: 2200, variant: 'info' });
-              if (navigator?.vibrate) navigator.vibrate(250);
-              playBeep(440, 400, 0.5); // frequency 440Hz, 400ms, medium volume
+              try { if (navigator?.vibrate) navigator.vibrate(250); } catch(e) {}
+              try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
             }
             if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
             setRunning(false);
@@ -485,7 +413,16 @@ export default function ToolsSheet({ open, onClose }) {
     }
   }
 
-  function handleStart() {
+  async function handleStart() {
+    // IMPORTANT: Unlock/resume AudioContext during the user gesture so later playback is allowed on iOS/PWA.
+    try {
+      // ensureAudioContext may resume a suspended context; it's OK if utils/sound handles absence gracefully
+      ensureAudioContext();
+    } catch (e) {
+      // non-fatal; continue anyway
+      console.warn('ensureAudioContext failed', e);
+    }
+
     setLeftSeconds(l => (l <= 0 ? presetSeconds : l));
     finishedNotifiedRef.current = false;
     setRunning(true);
@@ -520,7 +457,7 @@ export default function ToolsSheet({ open, onClose }) {
           style={{
             position: 'fixed',
             left: '50%',
-            top: 64,
+            top: 85,
             transform: 'translateX(-50%)',
             zIndex: 999999,
             background: 'var(--secondary)',
@@ -557,15 +494,14 @@ export default function ToolsSheet({ open, onClose }) {
           }}
         >
 <div
-  ref={cardRef}
   onClick={(e) => e.stopPropagation()}
   className="card"
   style={{
-    // keep it fixed and flush to bottom by default (JS may later set explicit height)
+    // anchor to both top and bottom so sheet is always flush to bottom
     position: 'fixed',
     left: 8,
     right: 8,
-    bottom: 0, // no negative hack anymore
+    bottom: -20,
 
     // ensure it's above the overlay and other UI
     zIndex: 999999,
