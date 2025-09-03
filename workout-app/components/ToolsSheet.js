@@ -532,6 +532,7 @@ export default function ToolsSheet({ open, onClose }) {
 
     overflow: 'auto',
     boxSizing: 'border-box',
+    maxHeight: 'calc(min(100dvh, 100vh) - 110px)',
 
     // keep scroll smooth on iOS
     WebkitOverflowScrolling: 'touch'
