@@ -15,6 +15,14 @@ function groupRoutineByDay(rows, routineName) {
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
+// only allow 0-9
+const sanitizeInt = (v) => (v ?? '').replace(/\D/g, '');
+
+// block scientific-notation/decimal keys on desktop
+const blockBadKeys = (e) => {
+  if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault();
+};
+
 function isZeroish(v) {
   if (v === null || v === undefined) return true;
   const s = String(v).trim();
@@ -597,21 +605,43 @@ const lastByExercise = useMemo(() => {
                   </span>
                 </div>
 
-                <input
-                  className="set-input"
-                  placeholder="Weight"
-                  inputMode="decimal"
-                  value={s.weight}
-                  onChange={e => updateSet(globalIndex, { weight: e.target.value })}
-                />
+<input
+  className="set-input"
+  type="text"                 // full control, no 'e', '-', '.'
+  inputMode="numeric"         // mobile numeric keypad
+  pattern="[0-9]*"
+  placeholder="Weight"
+  value={s.weight}
+  onKeyDown={blockBadKeys}
+  onChange={e => {
+    const clean = sanitizeInt(e.target.value);
+    updateSet(globalIndex, { weight: clean });
+  }}
+  onPaste={e => {
+    const text = e.clipboardData?.getData('text') ?? '';
+    e.preventDefault();
+    updateSet(globalIndex, { weight: sanitizeInt(text) });
+  }}
+/>
 
-                <input
-                  className="set-input"
-                  placeholder="Reps"
-                  inputMode="text"
-                  value={s.reps}
-                  onChange={e => updateSet(globalIndex, { reps: e.target.value })}
-                />
+<input
+  className="set-input"
+  type="text"
+  inputMode="numeric"
+  pattern="[0-9]*"
+  placeholder="Reps"
+  value={s.reps}
+  onKeyDown={blockBadKeys}
+  onChange={e => {
+    const clean = sanitizeInt(e.target.value);
+    updateSet(globalIndex, { reps: clean });
+  }}
+  onPaste={e => {
+    const text = e.clipboardData?.getData('text') ?? '';
+    e.preventDefault();
+    updateSet(globalIndex, { reps: sanitizeInt(text) });
+  }}
+/>
               </div>
             );
           })}
