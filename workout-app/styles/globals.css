@@ -374,7 +374,6 @@ select {
 
 /* fixed sheet anchored bottom, nearly full viewport height */
 .sheet-card {
-  position: relative;            /* relative to overlay */
   width: calc(100% - 0px);      /* left + right padding */
   max-width: 1040px;
   max-height: calc(100vh - 72px); /* nearly full height */
