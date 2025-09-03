@@ -178,7 +178,7 @@ function PlateCalculator() {
   const pendingTimers = useRef({});
 
   function incrementPlate(p) { setCounts(prev => ({ ...prev, [p]: (prev[p] || 0) + 1 })); }
-  function decrementPlate(p) { setCounts(prev => ({ ...prev, [p]: Math.max(0, (prev[p] || 0) - 1) })); }
+  function decrementPlate(p) { setCounts(prev => ({ ...prev, [p]: Math.max(0, (prev[p] || 0) - 1 })); }
 
   function handlePointerUp(p, e) {
     if (e && e.pointerType === 'mouse' && (e.button ?? 0) !== 0) return;
@@ -333,7 +333,7 @@ function RestTimerControls({
   );
 }
 
-/* ---------- ToolsSheet main (deadline-based timer + notifications default ON) ---------- */
+/* ---------- ToolsSheet main (deadline-based timer; notifications removed) ---------- */
 export default function ToolsSheet({ open, onClose }) {
   const [tab, setTab] = useState('timer');
 
@@ -341,22 +341,19 @@ export default function ToolsSheet({ open, onClose }) {
   const [leftSeconds, setLeftSeconds] = useState(0);
   const [running, setRunning] = useState(false);
 
-  // Notifications are automatically enabled by default (no UI toggle)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
   const tickRef = useRef(null);
   const endAtRef = useRef(null);          // absolute epoch ms when timer should end
   const finishedNotifiedRef = useRef(false);
+  const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : '');
 
-  /* ---------- helpers: storage / notifications ---------- */
+  /* ---------- helpers: storage ---------- */
   const STORAGE_KEY = 'restTimerState_v2';
   function persistState() {
     try {
       const data = {
         presetSeconds,
         running,
-        endAt: endAtRef.current,
-        notificationsEnabled
+        endAt: endAtRef.current
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {}
@@ -367,7 +364,6 @@ export default function ToolsSheet({ open, onClose }) {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (typeof parsed.presetSeconds === 'number') setPresetSeconds(parsed.presetSeconds);
-      if (typeof parsed.notificationsEnabled === 'boolean') setNotificationsEnabled(parsed.notificationsEnabled);
 
       if (parsed.endAt && parsed.running) {
         endAtRef.current = parsed.endAt;
@@ -379,71 +375,12 @@ export default function ToolsSheet({ open, onClose }) {
     } catch {}
   }
 
-  async function ensureNotificationPermission() {
-    if (!('Notification' in window)) return false;
-    if (Notification.permission === 'granted') return true;
-    if (Notification.permission === 'denied') return false;
-    try {
-      const res = await Notification.requestPermission();
-      return res === 'granted';
-    } catch { return false; }
-  }
-
-  async function postFinishNotification() {
-    try {
-      if (!notificationsEnabled) return;
-      const ok = await ensureNotificationPermission();
-      if (!ok) return;
-
-      // Use a unique tag to avoid grouping with previous notifications (helps them surface as new)
-      const uniqueTag = `rest-timer-finished-${Date.now()}`;
-
-      const options = {
-        body: 'Time to lift!',
-        vibrate: [150, 100, 150],
-        tag: uniqueTag,
-        renotify: false,
-        requireInteraction: true, // keep it visible until the user interacts (where supported)
-        silent: false,
-        // replace with your real icon / badge paths if available
-        icon: '/icons/notification-192.png',
-        badge: '/icons/notification-badge.png',
-        data: { url: window.location.href },
-        actions: [{ action: 'open', title: 'Open App' }]
-      };
-
-      // Prefer service worker showNotification if available (works when page is backgrounded)
-      const reg = await (navigator.serviceWorker?.ready ?? Promise.resolve(null));
-      if (reg?.showNotification) {
-        try {
-          await reg.showNotification('Rest finished', options);
-        } catch (err) {
-          // fallback to page notification if SW showNotification fails
-          new Notification('Rest finished', options);
-        }
-      } else if ('Notification' in window) {
-        new Notification('Rest finished', options);
-      }
-
-      try { if (navigator?.vibrate) navigator.vibrate([150, 100, 150]); } catch {}
-    } catch (e) {
-      console.warn('Notification error', e);
-    }
-  }
-
   /* ---------- effects: init / cleanup ---------- */
   useEffect(() => {
-    loadState();
+    // capture original title
+    try { originalTitleRef.current = document.title || ''; } catch {}
 
-    // Try to request permission on load if permission is still 'default' (user asked for automatic)
-    (async () => {
-      try {
-        if ('Notification' in window && Notification.permission === 'default') {
-          // best-effort request — some browsers require a user gesture and will ignore/block the prompt
-          await ensureNotificationPermission();
-        }
-      } catch (e) { /* ignore */ }
-    })();
+    loadState();
 
     // page lifecycle: recompute when we come back and handle finishing
     function onVisibility() {
@@ -457,10 +394,11 @@ export default function ToolsSheet({ open, onClose }) {
             setRunning(false);
             endAtRef.current = null;
             persistState();
-            // Fire completion
+            // Fire completion feedback when user returns
             try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
             showToast('Timer finished!', { duration: 2200, variant: 'info' });
-            postFinishNotification();
+            try { if (navigator?.vibrate) navigator.vibrate(250); } catch {}
+            try { document.title = originalTitleRef.current; } catch {}
           }
         }
       }
@@ -478,11 +416,12 @@ export default function ToolsSheet({ open, onClose }) {
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('pagehide', onPageHide);
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+      try { document.title = originalTitleRef.current; } catch {}
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { persistState(); }, [presetSeconds, notificationsEnabled]);
+  useEffect(() => { persistState(); }, [presetSeconds]);
 
   useEffect(() => {
     // Start/update ticking loop: uses deadline math (endAtRef) so it stays accurate
@@ -494,6 +433,13 @@ export default function ToolsSheet({ open, onClose }) {
         const remain = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
         setLeftSeconds(remain);
 
+        // update title for background/tab visibility
+        try {
+          const mm = String(Math.floor(remain / 60)).padStart(2, '0');
+          const ss = String(remain % 60).padStart(2, '0');
+          document.title = remain > 0 ? `${mm}:${ss} • Rest Timer` : originalTitleRef.current;
+        } catch {}
+
         if (remain <= 0 && !finishedNotifiedRef.current) {
           finishedNotifiedRef.current = true;
           if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
@@ -504,11 +450,12 @@ export default function ToolsSheet({ open, onClose }) {
           showToast('Timer finished!', { duration: 2200, variant: 'info' });
           try { if (navigator?.vibrate) navigator.vibrate(250); } catch {}
           try { playBeep(440, 400, 0.5); } catch (e) { console.warn('playBeep error', e); }
-          postFinishNotification();
+          try { document.title = originalTitleRef.current; } catch {}
         }
       }, 250); // UI feels snappy; accuracy is from Date.now()
     } else {
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+      try { document.title = originalTitleRef.current; } catch {}
     }
 
     return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
@@ -539,9 +486,6 @@ export default function ToolsSheet({ open, onClose }) {
     setRunning(true);
     setTab('timer');
 
-    // try to ensure permission at start as well (best-effort)
-    if (notificationsEnabled) { await ensureNotificationPermission(); }
-
     persistState();
   }
 
@@ -554,6 +498,7 @@ export default function ToolsSheet({ open, onClose }) {
     endAtRef.current = null;
     finishedNotifiedRef.current = false;
     persistState();
+    try { document.title = originalTitleRef.current; } catch {}
   }
 
   function handleReset() {
@@ -562,6 +507,7 @@ export default function ToolsSheet({ open, onClose }) {
     endAtRef.current = null;
     finishedNotifiedRef.current = false;
     persistState();
+    try { document.title = originalTitleRef.current; } catch {}
   }
 
   function overlayClick() { if (typeof onClose === 'function') onClose(); }
