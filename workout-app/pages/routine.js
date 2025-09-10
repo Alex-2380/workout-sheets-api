@@ -33,6 +33,8 @@ export default function RoutineView() {
     <div className="card" key={d}>
       <div className="h2 day-title">Day {d}</div>
 
+              <div className="divider" />
+
       <div className="grid exercises">
         {byDay[d].map(ex => (
           <div className="kpi" key={ex.exercise}>
