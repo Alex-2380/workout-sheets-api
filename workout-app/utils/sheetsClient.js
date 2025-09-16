@@ -5,7 +5,11 @@ const PUBLIC_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
 
 function buildUrl(tab) {
   const encoded = encodeURIComponent(tab);
-  if (PUBLIC_BASE) return `${PUBLIC_BASE}/api/sheets?tab=${encoded}`;
+  if (PUBLIC_BASE) {
+    // if you point to an external API, it expects /sheets?tab=...
+    return `${PUBLIC_BASE}/sheets?tab=${encoded}`;
+  }
+  // default: the Next API route lives at /api/sheets
   return `/api/sheets?tab=${encoded}`;
 }
 
@@ -171,9 +175,70 @@ export const sheets = {
     }
   },
 
-  // --- NEW: update a user's "Current Routine" in the Users sheet ---
-  // Client expects the /api/sheets endpoint (or remote API) to accept a PATCH-like update payload.
-  // If your server API is different, you can adapt this implementation to match it.
+  // --- NEW: fetch Exercises sheet (Exercise, Primary Muscle)
+  async getExercises() {
+    const url = buildUrl('Exercises');
+    try {
+      const raw = await fetchJson(url);
+      const table = normalizeToTable(raw);
+      if (!table || table.length < 1) return [];
+      const header = table[0];
+      const rows = table.slice(1);
+      const ixExercise = findHeaderIndex(header, 'Exercises') !== -1 ? findHeaderIndex(header, 'Exercises') : 0;
+      const ixPrimary = findHeaderIndex(header, 'Primary Muscle') !== -1 ? findHeaderIndex(header, 'Primary Muscle') : 1;
+      return rows.map(r => ({
+        exercise: String(r[ixExercise] ?? '').trim(),
+        primary: String(r[ixPrimary] ?? '').trim()
+      })).filter(x => !!x.exercise);
+    } catch (e) {
+      console.warn('sheets.getExercises failed:', e.message || e);
+      return [];
+    }
+  },
+
+  // --- NEW: append one or more exercises to Exercises sheet (rows: array-of-arrays)
+  async appendExercises(rows) {
+    const url = buildUrl('Exercises');
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows })
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        console.error('appendExercises POST failed', res.status, txt);
+        throw new Error(`POST failed ${res.status}`);
+      }
+      return true;
+    } catch (e) {
+      console.warn('appendExercises failed:', e.message || e);
+      return false;
+    }
+  },
+
+  // --- NEW: append rows to Routines sheet (rows: array-of-arrays)
+  async appendRoutines(rows) {
+    const url = buildUrl('Routines');
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows })
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        console.error('appendRoutines POST failed', res.status, txt);
+        throw new Error(`POST failed ${res.status}`);
+      }
+      return true;
+    } catch (e) {
+      console.warn('appendRoutines failed:', e.message || e);
+      return false;
+    }
+  },
+
+  // --- update a user's "Current Routine" in the Users sheet ---
   async setUserRoutine(username, routine) {
     const url = buildUrl('Users');
     try {
