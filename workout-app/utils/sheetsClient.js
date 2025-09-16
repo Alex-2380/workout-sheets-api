@@ -7,7 +7,7 @@ function buildUrl(tab) {
   const encoded = encodeURIComponent(tab);
   if (PUBLIC_BASE) {
     // if you point to an external API, it expects /sheets?tab=...
-    return `${PUBLIC_BASE}/sheets?tab=${encoded}`;
+    return `${PUBLIC_BASE}/api/sheets?tab=${encoded}`;
   }
   // default: the Next API route lives at /api/sheets
   return `/api/sheets?tab=${encoded}`;
