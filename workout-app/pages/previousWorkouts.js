@@ -80,7 +80,7 @@ export default function PreviousWorkouts() {
   };
 
   return (
-    <div className="grid fade-in prev-page" style={{ gap: 12 }}>
+    <div className="grid fade-in prev-page" style={{ gap: 8 }}>
       <div className="card header-card">
         <div className="h2 page-title" style={{ textAlign: 'center', color: 'var(--accent)', margin: 0 }}>
           Previous Workouts
