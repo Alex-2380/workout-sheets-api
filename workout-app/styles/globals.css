@@ -150,12 +150,20 @@ select {
 .primary:active { transform: translateY(1px) scale(.98); }
 
 /* Ghost / secondary button */
-.ghost,
-.secondary {
+.ghost {
   background: transparent;
   border: 1px solid var(--input-border);
   border-radius: 14px;
   padding: 12px 14px;
+}
+
+.secondary {
+  background: var(--secondary);
+  color: #0b0b0e;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 700;
+  text-align: center;
 }
 .ghost:hover, .secondary:hover { filter: brightness(1.03); }
 .ghost:active, .secondary:active { transform: translateY(1px) scale(.98); }
@@ -493,6 +501,8 @@ select {
   .dashboard .grid-2 { grid-template-columns: 1fr; gap: 10px; }
 }
 
+.title-accent { color: var(--accent); margin: 0; }
+
 /* --- Routine header stays primary, centered --- */
 .routine-page .header-card { text-align: center; padding: 12px; }
 .routine-page .title-accent { color: var(--accent); margin: 0; }
@@ -525,6 +535,12 @@ select {
   line-height: 1.05;
 }
 
+.sr {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.05;
+}
 
 /* prev-page: spacing + summary-like layout */
 .prev-page { padding-top: 12px; }
@@ -551,3 +567,4 @@ select {
   .prev-page .row { grid-template-columns: 1fr 1fr; }
   .prev-page .session-body .card { padding-left: 10px; padding-right: 10px; }
 }
+
