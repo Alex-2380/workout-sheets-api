@@ -186,7 +186,16 @@ export default function WorkoutPage() {
   const me = users.find(u => u.name === user?.name);
   const [routines, setRoutines] = useState(storage.getCachedRoutines());
   const byDay = useMemo(() => groupRoutineByDay(routines, me?.routine || ''), [routines, me?.routine]);
-  const [day, setDay] = useState(Object.keys(byDay)[0] || '1');
+  // Initialize day from any stored active workout if present, otherwise the first byDay key
+const [day, setDay] = useState(() => {
+  try {
+    const stored = user ? storage.getActiveWorkout(user.name) : null;
+    if (stored && stored.day) return String(stored.day);
+  } catch (e) { /* ignore */ }
+
+  const keys = Object.keys(byDay);
+  return keys.length ? keys[0] : '1';
+});
 
   const [active, setActive] = useState(() => user ? storage.getActiveWorkout(user.name) : null);
   const [history, setHistory] = useState([]);
@@ -196,6 +205,7 @@ export default function WorkoutPage() {
   const [summaryRows, setSummaryRows] = useState([]); // 2D array for POSTing
   const [summaryDisplay, setSummaryDisplay] = useState([]); // pretty objects for UI
   const [achievements, setAchievements] = useState([]);
+  const [saving, setSaving] = useState(false);
   const [elapsedAtFinish, setElapsedAtFinish] = useState(0);
 
   // Timer
@@ -380,11 +390,20 @@ function buildSummary() {
   }
 
   // Save to sheet (with offline outbox fallback)
-  async function confirmSave() {
-    if (!active) return;
-    if (!summaryRows.length) { setShowSummary(false); return; }
+async function confirmSave() {
+  if (!active) return;
+  if (!summaryRows.length) { setShowSummary(false); return; }
 
-    const ok = await sheets.appendWorkoutRows(user.name, summaryRows);
+  setSaving(true);
+  let ok = false;
+  try {
+    try {
+      ok = await sheets.appendWorkoutRows(user.name, summaryRows);
+    } catch (e) {
+      // treat exceptions as failure -> fallback to outbox
+      ok = false;
+    }
+
     if (!ok) {
       summaryRows.forEach(r => {
         const [u, routine, day, exercise, weight, set, reps, date] = r;
@@ -392,8 +411,8 @@ function buildSummary() {
       });
     }
 
-    try { confetti(); } catch {}
-    // toast feedback (online/offline)
+    try { confetti(); } catch (e) {}
+
     if (ok) {
       showToast('Workout saved! 💪', { variant: 'success', duration: 1600 });
     } else {
@@ -403,10 +422,13 @@ function buildSummary() {
     storage.clearActiveWorkout(user.name);
     setActive(null);
     setShowSummary(false);
-
-    // give the animation + toast a moment to play before navigating
-    setTimeout(() => { window.location.href = '/dashboard'; }, 1800);
+  } finally {
+    setSaving(false);
   }
+
+  // give the animation + toast a moment to play before navigating
+  setTimeout(() => { window.location.href = '/dashboard'; }, 1800);
+}
 
   function cancelWorkout() {
     if (!user) return;
@@ -711,7 +733,7 @@ const lastByExercise = useMemo(() => {
 
               {/* Achievements inside the same scroll */}
               {achievements.length > 0 && (
-                <div className="card achievements" style={{ padding: 12, marginBottom: 100 }}>
+                <div className="card achievements" style={{ padding: 12, marginBottom: 8 }}>
                   <div className="h2" style={{ margin: 0 }}>Achievements</div>
                   <div className="divider" />
                   <ul className="clean-list" style={{ marginTop: 4 }}>
@@ -722,10 +744,12 @@ const lastByExercise = useMemo(() => {
             </div>
 
             {/* Sticky action bar: stays visible while the sheet-body scrolls */}
-            <div className="modal-actions">
-              <button className="ghost" onClick={() => setShowSummary(false)}>Close</button>
-              <button className="primary" onClick={confirmSave}>Finish & Save</button>
-            </div>
+<div className="modal-actions">
+  <button className="ghost" onClick={() => setShowSummary(false)}>Close</button>
+  <button className="primary" onClick={confirmSave} disabled={saving}>
+    {saving ? 'Saving...' : 'Finish & Save'}
+  </button>
+</div>
           </div>
         </div>
       )}
