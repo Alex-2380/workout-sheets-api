@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 const FOODS = ['steak', 'chicken', 'apple', 'banana', 'cheese', 'cake'];
 
-// --- helpers for HSL parsing + complementary color ---
+// --- helpers for HSL parsing + complementary color (robust enough for hsl CSS vars) ---
 const parseHsl = (hslStr) => {
   if (!hslStr || typeof hslStr !== 'string') return null;
   const m = hslStr.match(/hsla?\(([^)]+)\)/i);
@@ -37,7 +37,7 @@ export default function SnakeGame() {
   const rafRef = useRef(null);
   const lastTimeRef = useRef(0);
 
-  // runtime mutable state (used by loop + handlers)
+  // mutable runtime state
   const stateRef = useRef({
     designW: 360,
     designH: 700,
@@ -69,8 +69,9 @@ export default function SnakeGame() {
   const [best, setBest] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
+  const [uiButtonsTop, setUiButtonsTop] = useState(44);
 
-  // audio helpers
+  // audio
   const audioCtxRef = useRef(null);
   const ensureAudio = () => {
     if (!audioCtxRef.current) {
@@ -114,19 +115,6 @@ export default function SnakeGame() {
     o.stop(now + 0.35);
   };
 
-  // read theme colors
-  const getThemeColors = () => {
-    try {
-      const cs = getComputedStyle(document.documentElement);
-      const accent = (cs.getPropertyValue('--accent') || '').trim() || 'hsl(145 60% 45%)';
-      const secondary = (cs.getPropertyValue('--secondary') || '').trim() || 'hsl(42 95% 55%)';
-      return { accent, secondary };
-    } catch (e) {
-      return { accent: 'hsl(145 60% 45%)', secondary: 'hsl(42 95% 55%)' };
-    }
-  };
-
-  // load best from localStorage on mount
   useEffect(() => {
     try {
       const b = parseInt(localStorage.getItem('snake_best') || '0', 10) || 0;
@@ -143,42 +131,37 @@ export default function SnakeGame() {
     const wrapper = wrapperRef.current;
     const outer = outerRef.current;
     if (!canvas || !wrapper || !outer) return;
-
     const ctx = canvas.getContext('2d');
     const st = stateRef.current;
 
-    // outer container baseline
-    outer.style.width = '100%';
-    outer.style.display = 'flex';
-    outer.style.justifyContent = 'center';
-    outer.style.boxSizing = 'border-box';
-    outer.style.padding = '12px';
+    // disable/enable body scroll
+    function overlayBodyOverflow(lock) {
+      try { document.body.style.overflow = lock ? 'hidden' : ''; } catch (e) {}
+    }
 
-    // sizing/resizing — improved logic so grid fits height exactly (avoids partial bottom row)
+    // Resize logic (portrait scaling like Flappy)
     function resize() {
-      const pad = (document.fullscreenElement || document.webkitFullscreenElement || st.isPseudoFullscreen) ? 0 : 8;
+      const st = stateRef.current;
+      const designW = st.designW, designH = st.designH;
+      const fsNative = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      const fs = fsNative || st.isPseudoFullscreen;
+      const pad = fs ? 0 : 8;
       const availW = Math.max(320, window.innerWidth - pad * 2);
       const availH = Math.max(480, window.innerHeight - pad * 2);
 
-      // keep portrait scaling based on designW/designH
-      const scale = Math.min(availW / st.designW, availH / st.designH);
+      const scale = Math.min(availW / designW, availH / designH);
       st.scale = scale;
 
-      // initial target sizes
-      const targetW = Math.round(st.designW * scale);
-      const targetH = Math.round(st.designH * scale);
+      const cssWidth = Math.round(designW * scale);
+      const cssHeight = Math.round(designH * scale);
 
-      // compute tile so grid rows are integer and fill vertically
-      const tentativeTile = targetW / st.cols;
-      // round rows using targetH / tentativeTile (round, not floor) to avoid fractional last row
-      let rows = Math.max(10, Math.round(targetH / tentativeTile));
+      // Compute tile so grid fits nicely (avoid fractional bottom row)
+      const tentativeTile = cssWidth / st.cols;
+      let rows = Math.max(10, Math.round(cssHeight / tentativeTile));
       if (rows < 10) rows = 10;
-
-      // choose tile such that rows * tile = integer height that fits in available area
-      let tile = Math.floor((targetH / rows) * 100) / 100; // keep two decimals
+      let tile = Math.floor((cssHeight / rows) * 100) / 100;
       if (tile < 4) tile = 4;
 
-      // compute final css width/height from tile * cols/rows
       const cssW = Math.round(tile * st.cols);
       const cssH = Math.round(tile * rows);
 
@@ -187,7 +170,6 @@ export default function SnakeGame() {
       st.widthCss = cssW;
       st.heightCss = cssH;
 
-      // set canvas dimensions (CSS and backing store)
       const ratio = Math.max(1, window.devicePixelRatio || 1);
       canvas.style.width = cssW + 'px';
       canvas.style.height = cssH + 'px';
@@ -195,17 +177,21 @@ export default function SnakeGame() {
       canvas.height = Math.round(cssH * ratio);
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-      // If fullscreen (native or pseudo) center with grid; otherwise keep wrapper sized & centered
-      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || st.isPseudoFullscreen);
-      if (isFs) {
+      // compute UI button top near score baseline
+      const scoreY = Math.round(44 * st.scale);
+      const buttonHeight = Math.max(26, Math.round(28 * st.scale));
+      const uiTop = Math.max(6, scoreY - Math.round(buttonHeight / 2) + Math.round(2 * st.scale));
+      setUiButtonsTop(uiTop);
+
+      // wrapper layout
+      if (fs) {
         wrapper.style.position = 'fixed';
         wrapper.style.inset = '0';
-        wrapper.style.display = 'grid';
-        wrapper.style.placeItems = 'center';
-        wrapper.style.justifyContent = 'center';
+        wrapper.style.display = 'flex';
         wrapper.style.alignItems = 'center';
-        wrapper.style.zIndex = '99999';
+        wrapper.style.justifyContent = 'center';
         wrapper.style.padding = '0';
+        wrapper.style.zIndex = '99999';
         overlayBodyOverflow(true);
       } else {
         wrapper.style.position = 'relative';
@@ -220,13 +206,23 @@ export default function SnakeGame() {
       }
     }
 
-    function overlayBodyOverflow(lock) {
-      try {
-        document.body.style.overflow = lock ? 'hidden' : '';
-      } catch (e) {}
+    // spawn food in an empty cell
+    function spawnFood() {
+      const st = stateRef.current;
+      const occupied = new Set(st.snake.map(p => `${p.x},${p.y}`));
+      for (let tries = 0; tries < 400; tries++) {
+        const fx = Math.floor(Math.random() * st.cols);
+        const fy = Math.floor(Math.random() * st.rows);
+        if (!occupied.has(`${fx},${fy}`)) {
+          st.food = { x: fx, y: fy };
+          st.foodType = FOODS[Math.floor(Math.random() * FOODS.length)];
+          return;
+        }
+      }
+      st.food = { x: Math.floor(st.cols/3), y: Math.floor(st.rows/3) };
+      st.foodType = FOODS[Math.floor(Math.random() * FOODS.length)];
     }
 
-    // game initialization helpers
     function resetToMenu() {
       const st = stateRef.current;
       const cx = Math.floor(st.cols / 2);
@@ -250,22 +246,6 @@ export default function SnakeGame() {
       draw();
     }
 
-    function spawnFood() {
-      const st = stateRef.current;
-      const occupied = new Set(st.snake.map(p => `${p.x},${p.y}`));
-      for (let tries = 0; tries < 400; tries++) {
-        const fx = Math.floor(Math.random() * st.cols);
-        const fy = Math.floor(Math.random() * st.rows);
-        if (!occupied.has(`${fx},${fy}`)) {
-          st.food = { x: fx, y: fy };
-          st.foodType = FOODS[Math.floor(Math.random() * FOODS.length)];
-          return;
-        }
-      }
-      st.food = { x: Math.floor(st.cols/3), y: Math.floor(st.rows/3) };
-      st.foodType = FOODS[Math.floor(Math.random() * FOODS.length)];
-    }
-
     function stepLogic() {
       const st = stateRef.current;
       if (!st.alive) return;
@@ -279,7 +259,7 @@ export default function SnakeGame() {
       else if (st.dir === 'up') ny = head.y - 1;
       else if (st.dir === 'down') ny = head.y + 1;
 
-      // walls -> die. use integer grid check: die only when beyond last index
+      // walls -> die (only when truly beyond grid)
       if (nx < 0 || nx >= st.cols || ny < 0 || ny >= st.rows) {
         st.alive = false;
         onDeath();
@@ -327,12 +307,12 @@ export default function SnakeGame() {
       } catch (e) {}
     }
 
-    // drawing
+    // draw everything
     function draw() {
       const st = stateRef.current;
       if (!st) return;
 
-      // background (dirt)
+      // background (dirt-ish)
       const g = ctx.createLinearGradient(0, 0, 0, st.heightCss);
       g.addColorStop(0, '#d1b08a');
       g.addColorStop(0.7, '#b68a61');
@@ -340,12 +320,12 @@ export default function SnakeGame() {
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, st.widthCss, st.heightCss);
 
-      // compute theme colors & complementary colors for food
-      const theme = getThemeColors();
-      const foodFill = complementaryHsl(theme.accent) || '#ffffff';
-      const foodBorder = complementaryHsl(theme.secondary) || '#000000';
+      // food (opposite color logic)
+      const themeAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent')?.trim() || 'hsl(145 60% 45%)';
+      const themeSecondary = getComputedStyle(document.documentElement).getPropertyValue('--secondary')?.trim() || 'hsl(42 95% 55%)';
+      const foodFill = complementaryHsl(themeAccent) || '#fff';
+      const foodBorder = complementaryHsl(themeSecondary) || '#000';
 
-      // food circle
       if (st.food) {
         const fx = st.food.x * st.tile;
         const fy = st.food.y * st.tile;
@@ -359,10 +339,9 @@ export default function SnakeGame() {
         ctx.stroke();
       }
 
-      // snake (connected, rounded)
-      const themeColors = getThemeColors();
-      const accent = (parseHsl(themeColors.accent) ? themeColors.accent : '#2ecc71');
-      const secondary = (parseHsl(themeColors.secondary) ? themeColors.secondary : '#ffd966');
+      // snake body: connected rounded line
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent')?.trim() || '#2ecc71';
+      const secondary = getComputedStyle(document.documentElement).getPropertyValue('--secondary')?.trim() || '#ffd966';
 
       if (st.snake.length > 1) {
         ctx.lineCap = 'round';
@@ -376,13 +355,13 @@ export default function SnakeGame() {
           ctx.lineTo(p.x * st.tile + st.tile / 2, p.y * st.tile + st.tile / 2);
         }
 
-        // outer border stroke
-        const borderWidth = Math.max(1, st.tile * 0.1);
+        // outer border
+        const borderWidth = Math.max(1, st.tile * 0.18);
         ctx.lineWidth = Math.max(1, st.tile * 0.9 + borderWidth * 1.2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
         ctx.stroke();
 
-        // inner body stroke
+        // inner body color (accent)
         ctx.lineWidth = Math.max(1, st.tile * 0.9);
         ctx.strokeStyle = accent;
         ctx.stroke();
@@ -394,7 +373,7 @@ export default function SnakeGame() {
         ctx.fill();
       }
 
-      // head
+      // head (secondary color)
       if (st.snake.length) {
         const head = st.snake[st.snake.length - 1];
         const hx = head.x * st.tile + st.tile / 2;
@@ -410,7 +389,7 @@ export default function SnakeGame() {
         ctx.strokeStyle = 'rgba(0,0,0,0.95)';
         ctx.stroke();
 
-        // two eyes
+        // two eyes (goofy)
         const eyeOffsetX = Math.max(6, st.tile * 0.16);
         const eyeOffsetY = Math.max(6, st.tile * 0.20);
         const eyeR = Math.max(3, st.tile * 0.08);
@@ -505,7 +484,7 @@ export default function SnakeGame() {
       rafRef.current = requestAnimationFrame(loop);
     }
 
-    // start / restart functions
+    // start / restart
     function startGame() {
       const st = stateRef.current;
       st._started = true;
@@ -519,19 +498,18 @@ export default function SnakeGame() {
       startGame();
     }
 
+    const opposite = (a,b) => (a==='left'&&b==='right')||(a==='right'&&b==='left')||(a==='up'&&b==='down')||(a==='down'&&b==='up');
     function setDirection(d) {
       const st = stateRef.current;
-      if (!st) return;
-      const opp = (a,b) => (a==='left'&&b==='right')||(a==='right'&&b==='left')||(a==='up'&&b==='down')||(a==='down'&&b==='up');
       if (opp(d, st.dir)) return;
       st.nextDir = d;
       if (st.phase === 'menu') startGame();
     }
+    function opp(a,b) { return (a==='left'&&b==='right')||(a==='right'&&b==='left')||(a==='up'&&b==='down')||(a==='down'&&b==='up'); }
 
-    // pointer handlers: start/move/end — prevent accidental scroll while interacting the game
+    // pointer handling to support taps and swipes; prevents scrolling while interacting
     let moved = false;
     const touchThreshold = 12;
-
     function onPointerDown(e) {
       if (e.cancelable) e.preventDefault();
       try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -579,12 +557,12 @@ export default function SnakeGame() {
         const st = stateRef.current;
         if (st.phase === 'menu') startGame();
         else if (st.phase === 'dead') restartFromMenu();
-      } else if (code === 'KeyF') toggleFullscreenUI();
-      else if (code === 'Escape') exitFullscreenUI();
+      } else if (code === 'KeyF') uiToggleFullscreen();
+      else if (code === 'Escape') uiExitFullscreen();
     }
 
-    // Fullscreen toggles (native or pseudo)
-    async function toggleFullscreenUI() {
+    // Fullscreen UI toggles (native or pseudo)
+    async function uiToggleFullscreen() {
       try {
         const wrapper = wrapperRef.current;
         if (!document.fullscreenElement && !document.webkitFullscreenElement && !stateRef.current.isPseudoFullscreen) {
@@ -619,11 +597,10 @@ export default function SnakeGame() {
         setIsFullscreen(false);
         overlayBodyOverflow(stateRef.current.isPseudoFullscreen);
       }
-      // small delay to let browser apply fullscreen and then resize canvas properly
       setTimeout(resize, 60);
     }
 
-    async function exitFullscreenUI() {
+    async function uiExitFullscreen() {
       try {
         if (document.exitFullscreen) await document.exitFullscreen();
         else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
@@ -671,21 +648,27 @@ export default function SnakeGame() {
       window.removeEventListener('keydown', onKey);
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('pointerup', onPointerUp);
+      try { canvas.removeEventListener('pointerdown', onPointerDown); } catch (e) {}
+      try { canvas.removeEventListener('pointermove', onPointerMove); } catch (e) {}
+      try { canvas.removeEventListener('pointerup', onPointerUp); } catch (e) {}
       overlayBodyOverflow(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // UI-level toggles
-  const toggleFullscreenUI = async () => {
+  // UI-level toggle & exit to wire to the button
+  const uiToggleFullscreen = async () => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
     try {
       if (!document.fullscreenElement && !document.webkitFullscreenElement && !stateRef.current.isPseudoFullscreen) {
         if (wrapper.requestFullscreen) {
           await wrapper.requestFullscreen();
+          setIsFullscreen(true);
+          stateRef.current.isPseudoFullscreen = false;
+          document.body.style.overflow = 'hidden';
+        } else if (wrapper.webkitRequestFullscreen) {
+          await wrapper.webkitRequestFullscreen();
           setIsFullscreen(true);
           stateRef.current.isPseudoFullscreen = false;
           document.body.style.overflow = 'hidden';
@@ -703,17 +686,17 @@ export default function SnakeGame() {
         stateRef.current.isPseudoFullscreen = false;
         document.body.style.overflow = '';
       }
-      window.dispatchEvent(new Event('resize'));
+      setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 60);
     } catch (e) {
       stateRef.current.isPseudoFullscreen = true;
       setIsPseudoFullscreen(true);
       setIsFullscreen(false);
       document.body.style.overflow = 'hidden';
-      window.dispatchEvent(new Event('resize'));
+      setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 60);
     }
   };
 
-  const exitFullscreenUI = async () => {
+  const uiExitFullscreen = async () => {
     try {
       if (document.exitFullscreen) await document.exitFullscreen();
       else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
@@ -725,9 +708,11 @@ export default function SnakeGame() {
     window.dispatchEvent(new Event('resize'));
   };
 
-  // buttons safe-top offset and placement (we push them down enough to be under the phone status area)
   const safeTop = `env(safe-area-inset-top, 0px)`;
-  const buttonsTop = `calc(${safeTop} + 50px)`; // already slightly lower; you can adjust further here
+  const extraFsOffset = (isFullscreen || isPseudoFullscreen) ? 20 : 0;
+  const buttonsTopStyle = (isFullscreen || isPseudoFullscreen)
+    ? `calc(${uiButtonsTop}px + ${safeTop} + ${extraFsOffset}px)`
+    : `${uiButtonsTop}px`;
 
   const pseudoFsStyle = isPseudoFullscreen ? {
     position: 'fixed',
@@ -743,7 +728,7 @@ export default function SnakeGame() {
 
   return (
     <div ref={outerRef} style={{ width: '100%', margin: 0, padding: 12, boxSizing: 'border-box', background: 'transparent' }}>
-      <div ref={wrapperRef} style={{ position: 'relative', margin: '0 auto', boxSizing: 'border-box' }}>
+      <div ref={wrapperRef} style={{ position: 'relative', margin: '0 auto', boxSizing: 'border-box', ...pseudoFsStyle }}>
         <canvas
           ref={canvasRef}
           style={{
@@ -758,7 +743,7 @@ export default function SnakeGame() {
         {/* Back button (inside wrapper) */}
         <div style={{
           position: 'absolute',
-          top: buttonsTop,
+          top: buttonsTopStyle,
           left: 10,
           zIndex: 200000,
           display: 'flex',
@@ -784,7 +769,7 @@ export default function SnakeGame() {
         {/* Fullscreen toggle (inside wrapper) */}
         <div style={{
           position: 'absolute',
-          top: buttonsTop,
+          top: buttonsTopStyle,
           right: 10,
           zIndex: 200000,
           display: 'flex',
@@ -792,7 +777,7 @@ export default function SnakeGame() {
           pointerEvents: 'auto'
         }}>
           <button
-            onClick={toggleFullscreenUI}
+            onClick={uiToggleFullscreen}
             style={{
               background: 'rgba(255,255,255,0.06)',
               border: '1px solid rgba(255,255,255,0.06)',
