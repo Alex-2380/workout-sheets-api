@@ -729,6 +729,18 @@ export default function SnakeGame() {
   const safeTop = `env(safe-area-inset-top, 0px)`;
   const buttonsTop = `calc(${safeTop} + 50px)`; // already slightly lower; you can adjust further here
 
+  const pseudoFsStyle = isPseudoFullscreen ? {
+    position: 'fixed',
+    inset: 0,
+    width: '100%',
+    height: '100vh',
+    zIndex: 99999,
+    background: 'black',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  } : {};
+
   return (
     <div ref={outerRef} style={{ width: '100%', margin: 0, padding: 12, boxSizing: 'border-box', background: 'transparent' }}>
       <div ref={wrapperRef} style={{ position: 'relative', margin: '0 auto', boxSizing: 'border-box' }}>
