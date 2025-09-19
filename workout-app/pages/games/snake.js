@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 const FOODS = ['steak', 'chicken', 'apple', 'banana', 'cheese', 'cake'];
 
-// --- helpers for HSL parsing + complementary color (robust enough for hsl CSS vars) ---
+/* ---------- HSL parsing / complementary ---------- */
 const parseHsl = (hslStr) => {
   if (!hslStr || typeof hslStr !== 'string') return null;
   const m = hslStr.match(/hsla?\(([^)]+)\)/i);
@@ -29,15 +29,14 @@ const complementaryHsl = (hslStr) => {
   return `hsl(${h} ${p.s}% ${p.l}%)`;
 };
 
+/* ---------- Snake page ---------- */
 export default function SnakeGame() {
   const outerRef = useRef(null);
   const wrapperRef = useRef(null);
   const canvasRef = useRef(null);
-
   const rafRef = useRef(null);
   const lastTimeRef = useRef(0);
 
-  // mutable runtime state
   const stateRef = useRef({
     designW: 360,
     designH: 700,
@@ -64,6 +63,7 @@ export default function SnakeGame() {
   });
 
   const pointerStartRef = useRef(null);
+
   const [phase, setPhase] = useState('menu');
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
@@ -71,7 +71,7 @@ export default function SnakeGame() {
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const [uiButtonsTop, setUiButtonsTop] = useState(44);
 
-  // audio
+  // Audio helpers
   const audioCtxRef = useRef(null);
   const ensureAudio = () => {
     if (!audioCtxRef.current) {
@@ -132,14 +132,12 @@ export default function SnakeGame() {
     const outer = outerRef.current;
     if (!canvas || !wrapper || !outer) return;
     const ctx = canvas.getContext('2d');
-    const st = stateRef.current;
 
-    // disable/enable body scroll
     function overlayBodyOverflow(lock) {
       try { document.body.style.overflow = lock ? 'hidden' : ''; } catch (e) {}
     }
 
-    // Resize logic (portrait scaling like Flappy)
+    // Resize logic — mirror Flappy resizing & centering behavior
     function resize() {
       const st = stateRef.current;
       const designW = st.designW, designH = st.designH;
@@ -155,7 +153,7 @@ export default function SnakeGame() {
       const cssWidth = Math.round(designW * scale);
       const cssHeight = Math.round(designH * scale);
 
-      // Compute tile so grid fits nicely (avoid fractional bottom row)
+      // grid tile sizing based on width
       const tentativeTile = cssWidth / st.cols;
       let rows = Math.max(10, Math.round(cssHeight / tentativeTile));
       if (rows < 10) rows = 10;
@@ -177,36 +175,45 @@ export default function SnakeGame() {
       canvas.height = Math.round(cssH * ratio);
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-      // compute UI button top near score baseline
+      // compute UI button top so they align with score baseline (mirror flappy)
       const scoreY = Math.round(44 * st.scale);
       const buttonHeight = Math.max(26, Math.round(28 * st.scale));
       const uiTop = Math.max(6, scoreY - Math.round(buttonHeight / 2) + Math.round(2 * st.scale));
       setUiButtonsTop(uiTop);
 
-      // wrapper layout
+      // wrapper & outer layout — match Flappy exactly
       if (fs) {
+        outer.style.display = 'flex';
+        outer.style.alignItems = 'center';
+        outer.style.justifyContent = 'center';
+        outer.style.padding = '0';
         wrapper.style.position = 'fixed';
-        wrapper.style.inset = '0';
+        wrapper.style.left = '0';
+        wrapper.style.top = '0';
+        wrapper.style.width = '100vw';
+        wrapper.style.height = '100vh';
         wrapper.style.display = 'flex';
         wrapper.style.alignItems = 'center';
         wrapper.style.justifyContent = 'center';
         wrapper.style.padding = '0';
-        wrapper.style.zIndex = '99999';
+        wrapper.style.margin = '0';
         overlayBodyOverflow(true);
       } else {
+        outer.style.display = 'flex';
+        outer.style.alignItems = 'flex-start';
+        outer.style.justifyContent = 'center';
+        outer.style.padding = `${pad}px`;
         wrapper.style.position = 'relative';
-        wrapper.style.inset = '';
-        wrapper.style.display = 'block';
         wrapper.style.width = cssW + 'px';
         wrapper.style.height = cssH + 'px';
-        wrapper.style.margin = '0 auto';
+        wrapper.style.display = 'block';
+        wrapper.style.margin = '8px auto';
         wrapper.style.padding = '0';
-        wrapper.style.boxSizing = 'border-box';
         overlayBodyOverflow(false);
       }
     }
 
-    // spawn food in an empty cell
+    // spawn food
     function spawnFood() {
       const st = stateRef.current;
       const occupied = new Set(st.snake.map(p => `${p.x},${p.y}`));
@@ -259,7 +266,7 @@ export default function SnakeGame() {
       else if (st.dir === 'up') ny = head.y - 1;
       else if (st.dir === 'down') ny = head.y + 1;
 
-      // walls -> die (only when truly beyond grid)
+      // walls -> die only when truly beyond grid
       if (nx < 0 || nx >= st.cols || ny < 0 || ny >= st.rows) {
         st.alive = false;
         onDeath();
@@ -307,12 +314,11 @@ export default function SnakeGame() {
       } catch (e) {}
     }
 
-    // draw everything
+    // drawing
     function draw() {
       const st = stateRef.current;
       if (!st) return;
-
-      // background (dirt-ish)
+      // background dirt
       const g = ctx.createLinearGradient(0, 0, 0, st.heightCss);
       g.addColorStop(0, '#d1b08a');
       g.addColorStop(0.7, '#b68a61');
@@ -320,7 +326,7 @@ export default function SnakeGame() {
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, st.widthCss, st.heightCss);
 
-      // food (opposite color logic)
+      // food (opposite color)
       const themeAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent')?.trim() || 'hsl(145 60% 45%)';
       const themeSecondary = getComputedStyle(document.documentElement).getPropertyValue('--secondary')?.trim() || 'hsl(42 95% 55%)';
       const foodFill = complementaryHsl(themeAccent) || '#fff';
@@ -339,14 +345,13 @@ export default function SnakeGame() {
         ctx.stroke();
       }
 
-      // snake body: connected rounded line
+      // snake body: connected rounded path
       const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent')?.trim() || '#2ecc71';
       const secondary = getComputedStyle(document.documentElement).getPropertyValue('--secondary')?.trim() || '#ffd966';
 
       if (st.snake.length > 1) {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-
         ctx.beginPath();
         const first = st.snake[0];
         ctx.moveTo(first.x * st.tile + st.tile / 2, first.y * st.tile + st.tile / 2);
@@ -354,14 +359,10 @@ export default function SnakeGame() {
           const p = st.snake[i];
           ctx.lineTo(p.x * st.tile + st.tile / 2, p.y * st.tile + st.tile / 2);
         }
-
-        // outer border
-        const borderWidth = Math.max(1, st.tile * 0.18);
+        const borderWidth = Math.max(1, st.tile * 0.1);
         ctx.lineWidth = Math.max(1, st.tile * 0.9 + borderWidth * 1.2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
         ctx.stroke();
-
-        // inner body color (accent)
         ctx.lineWidth = Math.max(1, st.tile * 0.9);
         ctx.strokeStyle = accent;
         ctx.stroke();
@@ -373,28 +374,24 @@ export default function SnakeGame() {
         ctx.fill();
       }
 
-      // head (secondary color)
+      // head
       if (st.snake.length) {
         const head = st.snake[st.snake.length - 1];
         const hx = head.x * st.tile + st.tile / 2;
         const hy = head.y * st.tile + st.tile / 2;
         const headR = Math.max((st.tile * 0.52), 6);
-
         ctx.beginPath();
         ctx.fillStyle = secondary;
         ctx.arc(hx, hy, headR, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.lineWidth = Math.max(1, st.scale * 1.4);
         ctx.strokeStyle = 'rgba(0,0,0,0.95)';
         ctx.stroke();
 
-        // two eyes (goofy)
+        // eyes
         const eyeOffsetX = Math.max(6, st.tile * 0.16);
         const eyeOffsetY = Math.max(6, st.tile * 0.20);
         const eyeR = Math.max(3, st.tile * 0.08);
-
-        // left eye
         ctx.beginPath();
         ctx.fillStyle = '#fff';
         ctx.arc(hx - eyeOffsetX, hy - eyeOffsetY, eyeR * 1.8, 0, Math.PI * 2);
@@ -403,8 +400,6 @@ export default function SnakeGame() {
         ctx.fillStyle = '#000';
         ctx.arc(hx - eyeOffsetX + Math.min(eyeR * 0.4, 2), hy - eyeOffsetY + Math.min(eyeR * 0.15, 1), eyeR * 0.9, 0, Math.PI * 2);
         ctx.fill();
-
-        // right eye
         ctx.beginPath();
         ctx.fillStyle = '#fff';
         ctx.arc(hx + eyeOffsetX, hy - eyeOffsetY, eyeR * 1.8, 0, Math.PI * 2);
@@ -423,7 +418,7 @@ export default function SnakeGame() {
         ctx.stroke();
       }
 
-      // score (blocky)
+      // Score: blocky style
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
       const bigSize = Math.max(18, Math.round(28 * st.scale));
@@ -446,19 +441,15 @@ export default function SnakeGame() {
         const boxH = 140 * st.scale;
         ctx.fillStyle = 'rgba(0,0,0,0.7)';
         ctx.fillRect(st.widthCss / 2 - boxW / 2, cy - boxH / 2, boxW, boxH);
-
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#fff';
         ctx.font = `bold ${Math.max(14, Math.round(18 * st.scale))}px "Press Start 2P", monospace`;
         ctx.fillText('GAME OVER', st.widthCss / 2, cy - 34 * st.scale);
-
         ctx.font = `${Math.max(10, Math.round(12 * st.scale))}px "Press Start 2P", monospace`;
         ctx.fillText(`SCORE ${st.score || 0}`, st.widthCss / 2, cy - 6 * st.scale);
-
         const bestNow = st.best || 0;
         ctx.fillText(`BEST ${bestNow}`, st.widthCss / 2, cy + 18 * st.scale);
-
         ctx.fillText('TAP TO RESTART', st.widthCss / 2, cy + 44 * st.scale);
       }
     }
@@ -498,16 +489,15 @@ export default function SnakeGame() {
       startGame();
     }
 
-    const opposite = (a,b) => (a==='left'&&b==='right')||(a==='right'&&b==='left')||(a==='up'&&b==='down')||(a==='down'&&b==='up');
     function setDirection(d) {
       const st = stateRef.current;
+      const opp = (a,b) => (a==='left'&&b==='right')||(a==='right'&&b==='left')||(a==='up'&&b==='down')||(a==='down'&&b==='up');
       if (opp(d, st.dir)) return;
       st.nextDir = d;
       if (st.phase === 'menu') startGame();
     }
-    function opp(a,b) { return (a==='left'&&b==='right')||(a==='right'&&b==='left')||(a==='up'&&b==='down')||(a==='down'&&b==='up'); }
 
-    // pointer handling to support taps and swipes; prevents scrolling while interacting
+    // Pointer handling (taps + swipes). We prevent default on canvas to stop page scroll while interacting.
     let moved = false;
     const touchThreshold = 12;
     function onPointerDown(e) {
@@ -561,18 +551,18 @@ export default function SnakeGame() {
       else if (code === 'Escape') uiExitFullscreen();
     }
 
-    // Fullscreen UI toggles (native or pseudo)
+    // Fullscreen helpers (native + pseudo)
     async function uiToggleFullscreen() {
       try {
-        const wrapper = wrapperRef.current;
+        const wrapperEl = wrapperRef.current;
         if (!document.fullscreenElement && !document.webkitFullscreenElement && !stateRef.current.isPseudoFullscreen) {
-          if (wrapper.requestFullscreen) {
-            await wrapper.requestFullscreen();
+          if (wrapperEl.requestFullscreen) {
+            await wrapperEl.requestFullscreen();
             setIsFullscreen(true);
             stateRef.current.isPseudoFullscreen = false;
             overlayBodyOverflow(true);
-          } else if (wrapper.webkitRequestFullscreen) {
-            await wrapper.webkitRequestFullscreen();
+          } else if (wrapperEl.webkitRequestFullscreen) {
+            await wrapperEl.webkitRequestFullscreen();
             setIsFullscreen(true);
             stateRef.current.isPseudoFullscreen = false;
             overlayBodyOverflow(true);
@@ -591,7 +581,7 @@ export default function SnakeGame() {
           overlayBodyOverflow(false);
         }
       } catch (e) {
-        // fallback to pseudo fullscreen
+        // fallback to pseudo
         stateRef.current.isPseudoFullscreen = !stateRef.current.isPseudoFullscreen;
         setIsPseudoFullscreen(stateRef.current.isPseudoFullscreen);
         setIsFullscreen(false);
@@ -622,10 +612,10 @@ export default function SnakeGame() {
       } else {
         overlayBodyOverflow(true);
       }
-      setTimeout(resize, 60);
+      setTimeout(resize, 40);
     }
 
-    // wire up
+    // initialize
     resize();
     resetToMenu();
     if (!rafRef.current) { lastTimeRef.current = 0; rafRef.current = requestAnimationFrame(loop); }
@@ -635,11 +625,14 @@ export default function SnakeGame() {
     document.addEventListener('fullscreenchange', onFullscreenChange);
     document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
+    // pointer listeners — passive: false so we can preventDefault to stop page scroll while interacting canvas
     canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
     canvas.addEventListener('pointermove', onPointerMove, { passive: false });
     canvas.addEventListener('pointerup', onPointerUp, { passive: false });
     canvas.addEventListener('pointercancel', () => { pointerStartRef.current = null; }, { passive: false });
-    canvas.style.touchAction = 'none'; // disables scrolling while interacting the canvas
+
+    // disable native touch scrolling while interacting the canvas
+    canvas.style.touchAction = 'none';
 
     return () => {
       if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
@@ -656,7 +649,7 @@ export default function SnakeGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // UI-level toggle & exit to wire to the button
+  // UI-level toggle & exit exposed to button
   const uiToggleFullscreen = async () => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -665,12 +658,12 @@ export default function SnakeGame() {
         if (wrapper.requestFullscreen) {
           await wrapper.requestFullscreen();
           setIsFullscreen(true);
-          stateRef.current.isPseudoFullscreen = false;
+          setIsPseudoFullscreen(false);
           document.body.style.overflow = 'hidden';
         } else if (wrapper.webkitRequestFullscreen) {
           await wrapper.webkitRequestFullscreen();
           setIsFullscreen(true);
-          stateRef.current.isPseudoFullscreen = false;
+          setIsPseudoFullscreen(false);
           document.body.style.overflow = 'hidden';
         } else {
           stateRef.current.isPseudoFullscreen = true;
