@@ -301,6 +301,40 @@ select {
   top: 50% !important;
 }
 
+/* Shade-slider variant (reuses sizing of .color-slider) */
+.color-bar-container .color-slider.shade {
+  /* keep same size / centering as the regular slider, but higher z so it sits above gradients */
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px !important;
+  height: 35px !important;
+  min-width: 10px;
+  min-height: 28px;
+  border-radius: 6px;
+  background: #111;
+  border: 1px solid var(--accent);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  cursor: pointer;
+  touch-action: none;
+  transition: left 0.05s linear, transform .08s ease;
+  z-index: 3;
+}
+
+/* Secondary shade handle should use secondary border */
+.color-bar-container .color-slider.shade.secondary {
+  border: 1px solid var(--secondary);
+}
+
+/* Keep the small active/focus affordance for shade sliders */
+.color-bar-container .color-slider.shade:active,
+.color-bar-container .color-slider.shade:focus {
+  transform: translate(-50%, -50%) scale(1.04);
+  outline: none;
+}
+
 /* Small active / focus affordance */
 .color-bar-container .color-slider:active,
 .color-bar-container .color-slider:focus {
