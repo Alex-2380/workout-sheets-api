@@ -46,6 +46,17 @@ const hueFromHsl = (str) => {
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+const parseHsl = (str) => {
+  if (!str) return null;
+  const m = String(str).match(/hsl\(\s*([+-]?\d+(?:\.\d+)?)\D+([+-]?\d+(?:\.\d+)?)%\D+([+-]?\d+(?:\.\d+)?)%/i);
+  if (!m) return null;
+  return {
+    h: clamp(Math.round(Number(m[1])), 0, 360),
+    s: clamp(Math.round(Number(m[2])), 0, 100),
+    l: clamp(Math.round(Number(m[3])), 0, 100),
+  };
+};
+
 export default function Settings() {
   const user = storage.getUser();
 
@@ -65,13 +76,20 @@ export default function Settings() {
   const [accent, setAccent] = useState(initialAccent);
   const [secondary, setSecondary] = useState(initialSecondary);
 
-  // Refs for sliders (color pickers)
+  // Refs for hue sliders
   const barPrimaryRef = useRef(null);
   const barSecondaryRef = useRef(null);
   const sliderPrimaryRef = useRef(null);
   const sliderSecondaryRef = useRef(null);
 
+  // Refs for shade sliders
+  const shadeBarPrimaryRef = useRef(null);
+  const shadeBarSecondaryRef = useRef(null);
+  const shadeSliderPrimaryRef = useRef(null);
+  const shadeSliderSecondaryRef = useRef(null);
+
   useEffect(() => {
+    // On mode change keep saturation at 100 but preserve any user lightness
     const normalize = (val) => {
       if (!val) return val;
       let hsl = String(val).trim();
@@ -80,19 +98,11 @@ export default function Settings() {
         if (!conv) return val;
         hsl = conv;
       }
-      const m = hsl.match(/hsl\(\s*([+-]?\d+(?:\.\d+)?)\D+([+-]?\d+(?:\.\d+)?)%\D+([+-]?\d+(?:\.\d+)?)%/i);
-      if (!m) return hsl;
-      let h = Math.round(Number(m[1]));
-      let s = Math.round(Number(m[2]));
-      let l = Math.round(Number(m[3]));
-
-      if (mode === 'light') {
-        s = 100;
-        l = 40;
-      } else {
-        s = 100;
-        l = 50;
-      }
+      const parsed = parseHsl(hsl);
+      if (!parsed) return hsl;
+      const h = parsed.h;
+      const s = 100; // keep saturation full
+      const l = typeof parsed.l === 'number' ? parsed.l : (mode === 'light' ? 40 : 50);
       return `hsl(${h}, ${s}%, ${l}%)`;
     };
 
@@ -114,10 +124,11 @@ export default function Settings() {
     setTheme({ mode, accent, secondary });
   }, [mode, accent, secondary]);
 
+  // Hue move (keeps current L if present, forces S=100)
   const handleMove = (barEl, setter, clientX) => {
     if (!barEl) return;
     const rect = barEl.getBoundingClientRect();
-    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const x = clamp(clientX - rect.left, 0, rect.width);
     const hue = Math.round((x / rect.width) * 360);
 
     let current = null;
@@ -129,23 +140,11 @@ export default function Settings() {
       if (conv) current = conv;
     }
 
-    let s = null, l = null;
-    const m = String(current || '').match(/hsl\(\s*([+-]?\d+(?:\.\d+)?)\D+([+-]?\d+(?:\.\d+)?)%\D+([+-]?\d+(?:\.\d+)?)%/i);
-    if (m) {
-      s = Math.round(Number(m[2]));
-      l = Math.round(Number(m[3]));
-    } else {
-      if (mode === 'light') { s = 100; l = 40; }
-      else { s = 100; l = 50; }
-    }
+    const parsed = parseHsl(current || '');
+    let s = parsed?.s ?? 100;
+    let l = parsed?.l ?? (mode === 'light' ? 40 : 50);
 
-    if (mode === 'light') {
-      s = 100;
-      l = 40;
-    } else {
-      s = 100;
-      l = 50;
-    }
+    s = 100; // keep saturation consistent
 
     setter(`hsl(${hue}, ${s}%, ${l}%)`);
   };
@@ -157,12 +156,55 @@ export default function Settings() {
     onTouchMove: (e) => handleMove(barRef.current, setter, e.touches[0].clientX),
   });
 
-  const posFromHue = (h) => `${(h / 360) * 100}%`;
-  const primaryLeft = posFromHue(hueFromHsl(accent));
-  const secondaryLeft = posFromHue(hueFromHsl(secondary));
+  // Shade move (controls lightness L, keeps H and S)
+  const handleShadeMove = (barEl, setter, clientX) => {
+    if (!barEl) return;
+    const rect = barEl.getBoundingClientRect();
+    const x = clamp(clientX - rect.left, 0, rect.width);
+    const l = Math.round((x / rect.width) * 100);
+
+    let current = null;
+    if (setter === setAccent) current = accent;
+    else if (setter === setSecondary) current = secondary;
+
+    if (current && typeof current === 'string' && current.startsWith('#')) {
+      const conv = hexToHsl(current);
+      if (conv) current = conv;
+    }
+
+    const parsed = parseHsl(current || '');
+    const h = parsed?.h ?? (setter === setAccent ? hueFromHsl(accent) : hueFromHsl(secondary));
+    const s = parsed?.s ?? 100;
+
+    setter(`hsl(${h}, ${s}%, ${l}%)`);
+  };
+
+  const makeShadeHandlers = (barRef, setter) => ({
+    onMouseDown: (e) => handleShadeMove(barRef.current, setter, e.clientX),
+    onMouseMove: (e) => { if (e.buttons === 1) handleShadeMove(barRef.current, setter, e.clientX); },
+    onTouchStart: (e) => handleShadeMove(barRef.current, setter, e.touches[0].clientX),
+    onTouchMove: (e) => handleShadeMove(barRef.current, setter, e.touches[0].clientX),
+  });
+
+  const posFromHue = (h) => `${(clamp(h, 0, 360) / 360) * 100}%`;
+  const posFromLightness = (l) => `${clamp(l, 0, 100)}%`;
+
+  const parsedAccent = parseHsl(accent) || { h: hueFromHsl(accent), s: 100, l: 50 };
+  const parsedSecondary = parseHsl(secondary) || { h: hueFromHsl(secondary), s: 100, l: 50 };
+
+  const primaryLeft = posFromHue(parsedAccent.h);
+  const secondaryLeft = posFromHue(parsedSecondary.h);
+  const primaryShadeLeft = posFromLightness(parsedAccent.l);
+  const secondaryShadeLeft = posFromLightness(parsedSecondary.l);
 
   const primaryHandlers = makeHandlers(barPrimaryRef, setAccent);
   const secondaryHandlers = makeHandlers(barSecondaryRef, setSecondary);
+  const shadePrimaryHandlers = makeShadeHandlers(shadeBarPrimaryRef, setAccent);
+  const shadeSecondaryHandlers = makeShadeHandlers(shadeBarSecondaryRef, setSecondary);
+
+  // shade backgrounds: darker -> mid -> lighter for the current hue/sat
+  const primaryShadeBackground = `linear-gradient(to right, hsl(${parsedAccent.h}, ${parsedAccent.s}%, 5%), hsl(${parsedAccent.h}, ${parsedAccent.s}%, 50%), hsl(${parsedAccent.h}, ${parsedAccent.s}%, 95%))`;
+  const secondaryShadeBackground = `linear-gradient(to right, hsl(${parsedSecondary.h}, ${parsedSecondary.s}%, 5%), hsl(${parsedSecondary.h}, ${parsedSecondary.s}%, 50%), hsl(${parsedSecondary.h}, ${parsedSecondary.s}%, 95%))`;
 
   return (
     <div className="grid fade-in" style={{ maxWidth: '560px', margin: '0 auto' }}>
@@ -186,6 +228,7 @@ export default function Settings() {
           </button>
         </div>
 
+        {/* Primary (Hue) */}
         <div style={{ marginTop: 8, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="text-accent" style={{ fontWeight: 700 }}>Primary (Accent)</div>
         </div>
@@ -197,6 +240,19 @@ export default function Settings() {
           <div className="color-slider" ref={sliderPrimaryRef} style={{ left: primaryLeft }} />
         </div>
 
+        {/* Primary (Shade) */}
+        <div style={{ marginTop: 12, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        </div>
+        <div
+          className="color-bar-container"
+          ref={shadeBarPrimaryRef}
+          {...shadePrimaryHandlers}
+          style={{ background: primaryShadeBackground }}
+        >
+          <div className="color-slider shade" ref={shadeSliderPrimaryRef} style={{ left: primaryShadeLeft }} />
+        </div>
+
+        {/* Secondary (Hue) */}
         <div style={{ marginTop: 16, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="text-secondary" style={{ fontWeight: 700 }}>Secondary</div>
         </div>
@@ -207,9 +263,19 @@ export default function Settings() {
         >
           <div className="color-slider secondary" ref={sliderSecondaryRef} style={{ left: secondaryLeft }} />
         </div>
+
+        {/* Secondary (Shade) */}
+        <div style={{ marginTop: 12, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        </div>
+        <div
+          className="color-bar-container"
+          ref={shadeBarSecondaryRef}
+          {...shadeSecondaryHandlers}
+          style={{ background: secondaryShadeBackground }}
+        >
+          <div className="color-slider shade secondary" ref={shadeSliderSecondaryRef} style={{ left: secondaryShadeLeft }} />
+        </div>
       </div>
-
-
 
       <div className="card" style={{ marginTop: 12 }}>
         <div className="h2">Account</div>
