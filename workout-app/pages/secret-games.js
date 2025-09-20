@@ -14,10 +14,9 @@ export default function SecretGames() {
         </div>
       </div>
 
-      <div style={{ marginTop: 12 }} className="grid-2">
+      <div style={{ marginTop: 40 }} className="grid-2">
         <Link href="/games/flappy" className="action">Flappy</Link>
         <Link href="/games/snake" className="action">Snake</Link>
-        <Link href="/games/stack" className="action">other</Link>
       </div>
 
 
