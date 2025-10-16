@@ -76,7 +76,7 @@ if (Array.isArray(fromStorage)) {
     id: p.id || `${(p.exercise||'pin').replace(/\s+/g,'_')}_${Date.now()}`,
     exercise: p.exercise || '',
     config: {
-      mode: p?.config?.mode || '1rm',
+      mode: '1rm',
       range: 'all' // always default to All Time on load
     },
     expanded: false // always start collapsed
@@ -91,7 +91,7 @@ if (Array.isArray(fromStorage)) {
         id: p.id || `${(p.exercise||'pin').replace(/\s+/g,'_')}_${Date.now()}`,
         exercise: p.exercise || '',
         config: {
-          mode: p?.config?.mode || '1rm',
+          mode: '1rm',
           range: 'all'
         },
         expanded: false
