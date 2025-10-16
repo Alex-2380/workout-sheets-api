@@ -63,6 +63,22 @@ export default function Progress() {
     FIXED_EXERCISES.map(e => ({ exercise: e, mode: '1rm', range: '3m', expanded: false }))
   );
 
+  // pinned charts: array of { id, exercise, config: {mode, range}, expanded }
+  const [pinnedCharts, setPinnedCharts] = useState(() => {
+    try {
+      const fromStorage = (storage && typeof storage.getPinnedCharts === 'function')
+        ? storage.getPinnedCharts(user?.name)
+        : null;
+      if (Array.isArray(fromStorage)) return fromStorage;
+    } catch (e) {}
+    try {
+      const raw = localStorage.getItem(`pinnedCharts_${user?.name || 'anon'}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   // canvas refs & point caches
   const canvasRefs = useRef({});
   const canvasPoints = useRef({}); // key -> pixel points list
@@ -89,6 +105,75 @@ export default function Progress() {
     if (!name) return '';
     const found = (exerciseList || []).find(e => e.toLowerCase() === name.toLowerCase());
     return found || name;
+  }
+
+  // persist pinned charts (helper wrapper that tries storage util then localStorage)
+  function persistPinnedCharts(charts) {
+    try {
+      if (storage && typeof storage.savePinnedCharts === 'function') {
+        storage.savePinnedCharts(user.name, charts);
+        return;
+      }
+    } catch (e) {}
+    try {
+      localStorage.setItem(`pinnedCharts_${user?.name || 'anon'}`, JSON.stringify(charts));
+    } catch (e) {}
+  }
+
+  // add a pin
+  function pinChart(exercise, config) {
+    if (!exercise) return;
+    const id = `${exercise.replace(/\s+/g,'_')}_${Date.now()}`;
+    const newPinned = [...pinnedCharts, { id, exercise, config: { ...config }, expanded: false }];
+    setPinnedCharts(newPinned);
+    persistPinnedCharts(newPinned);
+  }
+
+  // remove a pin by id (asks caller to confirm if needed)
+  function unpinChart(id) {
+    const newPinned = pinnedCharts.filter(p => p.id !== id);
+    setPinnedCharts(newPinned);
+    persistPinnedCharts(newPinned);
+    // cleanup canvas refs/points for removed id key (optional)
+    const key = `pinned_${id}`;
+    delete canvasRefs.current[key];
+    delete canvasPoints.current[key];
+  }
+
+  // toggle pin for currently generated dynamic chart
+  function togglePinDynamic() {
+    if (!dynamicName) return;
+    // check if exact same exercise+config already exists
+    const match = pinnedCharts.find(p =>
+      p.exercise === dynamicName &&
+      p.config?.mode === dynamicConfig.mode &&
+      p.config?.range === dynamicConfig.range
+    );
+    if (match) {
+      if (confirm(`Unpin "${dynamicName}" (${dynamicConfig.range} / ${dynamicConfig.mode})?`)) {
+        unpinChart(match.id);
+      }
+    } else {
+      pinChart(dynamicName, dynamicConfig);
+    }
+  }
+
+  // update pinned chart config (e.g., when user changes range/mode on a pinned card)
+  function updatePinnedConfig(id, patch) {
+    setPinnedCharts(prev => {
+      const out = prev.map(p => p.id === id ? { ...p, config: { ...p.config, ...patch } } : p);
+      persistPinnedCharts(out);
+      return out;
+    });
+  }
+
+  // toggle pinned expanded
+  function togglePinnedExpanded(id, val) {
+    setPinnedCharts(prev => {
+      const out = prev.map(p => p.id === id ? { ...p, expanded: typeof val === 'boolean' ? val : !p.expanded } : p);
+      persistPinnedCharts(out);
+      return out;
+    });
   }
 
   // --------------------------
@@ -311,8 +396,9 @@ export default function Progress() {
     canvasPoints.current[key] = pixelPoints;
   }
 
-  // redraw charts when source data or configs change
+  // redraw charts when source data or configs change (handles dynamic, fixed, pinned)
   useEffect(() => {
+    // dynamic
     if (dynamicName) {
       const key = 'dynamic';
       const canvas = canvasRefs.current[key];
@@ -327,14 +413,23 @@ export default function Progress() {
       canvasPoints.current['dynamic'] = [];
     }
 
+    // fixed
     fixedConfigs.forEach((cfg, idx) => {
       const key = `fixed_${idx}`;
       const canvas = canvasRefs.current[key];
       const pts = pointsForExercise(cfg.exercise, cfg.range, cfg.mode);
       drawChart(key, canvas, pts, cfg.mode, 160);
     });
+
+    // pinned
+    pinnedCharts.forEach((p) => {
+      const key = `pinned_${p.id}`;
+      const canvas = canvasRefs.current[key];
+      const pts = pointsForExercise(p.exercise, p.config.range, p.config.mode);
+      drawChart(key, canvas, pts, p.config.mode, 160);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, fixedConfigs, dynamicName, dynamicConfig]);
+  }, [rows, fixedConfigs, dynamicName, dynamicConfig, pinnedCharts]);
 
   // pointer handlers: hover sets hoveredPoint for top-right label, click toggles persistent selection
   useEffect(() => {
@@ -405,9 +500,9 @@ export default function Progress() {
     });
 
     return () => handlers.forEach(h => h());
-    // NOTE: include dynamicName/dynamicConfig so dynamic canvas gets listeners when created/changed
+    // NOTE: include dynamicName/dynamicConfig/pinnedCharts so canvases get listeners when created/changed
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, fixedConfigs, dynamicName, dynamicConfig, selectedPoint]);
+  }, [rows, fixedConfigs, dynamicName, dynamicConfig, pinnedCharts, selectedPoint]);
 
   function updateFixedConfig(i, patch) {
     setFixedConfigs(prev => prev.map((p, idx) => idx === i ? { ...p, ...patch } : p));
@@ -442,6 +537,13 @@ export default function Progress() {
   // showMeta helpers for dynamic area
   const dynamicShowMeta = (selectedPoint && selectedPoint.key === 'dynamic') ? selectedPoint.meta
     : (hoveredPoint && hoveredPoint.key === 'dynamic' ? hoveredPoint.meta : null);
+
+  // helper to determine if dynamic chart is pinned (same exercise+config)
+  const dynamicIsPinned = pinnedCharts.some(p =>
+    p.exercise === dynamicName &&
+    p.config?.mode === dynamicConfig.mode &&
+    p.config?.range === dynamicConfig.range
+  );
 
   return (
     <div
@@ -495,19 +597,44 @@ export default function Progress() {
           <button className="ghost" onClick={() => { setDynamicName(''); setDynamicInput(''); }} style={{ flex: 1 }}>Clear</button>
         </div>
 
-{/* Replace the existing dynamicName conditional block with this */}
+{/* Dynamic chart block */}
 <div style={{ marginTop: 12 }}>
   {dynamicName ? (
     <>
       {/* Title on its own line */}
-      <div style={{
-        fontWeight: 700,
-        fontSize: 16,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis'
-      }}>
-        {dynamicName}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{
+          fontWeight: 700,
+          fontSize: 16,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          flex: 1,
+          minWidth: 0
+        }}>
+          {dynamicName}
+        </div>
+
+        {/* star control — fixed-size area that won't be pushed */}
+        <div style={{ flexShrink: 0 }}>
+          <button
+            className="ghost"
+            onClick={togglePinDynamic}
+            title={dynamicIsPinned ? 'Unpin chart' : 'Pin chart'}
+            style={{
+              borderColor: dynamicIsPinned ? 'var(--accent)' : undefined,
+              fontWeight: 700,
+              padding: '6px 10px',
+              borderRadius: 8,
+              fontSize: 18,
+              lineHeight: 1,
+              minWidth: 44,
+              textAlign: 'center',
+            }}
+          >
+            {dynamicIsPinned ? '★' : '☆'}
+          </button>
+        </div>
       </div>
 
       {/* Controls row: range selector on left, mode buttons on right (below the title) */}
@@ -544,11 +671,11 @@ export default function Progress() {
 
         {/* Top-right persistent label — same functionality as fixed cards */}
         {dynamicShowMeta && (
-                  <div style={{
-                    position: 'absolute', right: 10, top: 140,
-                    background: 'var(--panel)', border: '1px solid var(--card-border)', padding: '8px 10px',
-                    borderRadius: 10, zIndex: 20, minWidth: 160, textAlign:'left'
-                  }}>
+          <div style={{
+            position: 'absolute', right: 10, top: 140,
+            background: 'var(--panel)', border: '1px solid var(--card-border)', padding: '8px 10px',
+            borderRadius: 10, zIndex: 20, minWidth: 160, textAlign:'left'
+          }}>
             <div style={{ color: 'var(--muted)', fontSize: 12 }}>{shortDate(new Date(dynamicShowMeta.raw?.date || dynamicShowMeta.t || Date.now()))}</div>
             <div style={{ fontWeight: 800, color: 'var(--secondary)', fontSize: 15, marginTop: 6 }}>
               {dynamicConfig.mode === 'weight'
@@ -571,8 +698,6 @@ export default function Progress() {
           style={{ width: '100%', maxWidth: '100%', height: 200, display: 'block', boxSizing: 'border-box' }}
         />
       </div>
-
-
 
       {/* bottom stats (current / all-time best) */}
       <div style={{ display:'flex', gap:16, marginTop:10, justifyContent:'center' }}>
@@ -625,7 +750,7 @@ export default function Progress() {
               boxSizing: 'border-box',
               width: '100%',
               maxWidth: 960,
-              margin: '6px auto',
+              margin: '2px auto',
               position: 'relative',
               overflow: 'hidden'
             }}
@@ -634,7 +759,19 @@ export default function Progress() {
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
                 <button
                   onClick={() => updateFixedConfig(idx, { expanded: !cfg.expanded })}
-                  style={{ background:'transparent', border:'none', fontWeight:800, fontSize:18, textAlign:'left', flex:1, cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}
+                  style={{
+                    background:'transparent',
+                    border:'none',
+                    fontWeight:600,
+                    fontSize:16,
+                    textAlign:'left',
+                    flex:1,
+                    cursor:'pointer',
+                    whiteSpace:'nowrap',
+                    overflow:'hidden',
+                    textOverflow:'ellipsis',
+                    minWidth: 0
+                  }}
                 >
                   {cfg.exercise}
                 </button>
@@ -717,6 +854,148 @@ export default function Progress() {
         );
       })}
 
+      {/* Pinned charts section */}
+      {pinnedCharts.length > 0 && (
+        <div style={{ width: '100%', maxWidth: 960, marginTop: -12, boxSizing: 'border-box' }}>
+
+
+          {pinnedCharts.map((p) => {
+            const key = `pinned_${p.id}`;
+            // synthesize a cfg object for summaryFor (uses all-time)
+            const cfg = { exercise: p.exercise, mode: p.config.mode, range: p.config.range, expanded: !!p.expanded };
+            const sum = summaryFor(cfg);
+            const isExpanded = !!p.expanded;
+            const showMeta = (selectedPoint && selectedPoint.key === key) ? selectedPoint.meta : (hoveredPoint && hoveredPoint.key === key ? hoveredPoint.meta : null);
+
+            return (
+              <div
+                key={key}
+                className="card"
+                style={{
+                  padding: 10,
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  minWidth: 0,
+                  maxWidth: '91vw',
+                  margin: '15px auto', // same spacing as fixed cards
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ display:'flex', flexDirection:'column' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <button
+                        onClick={() => togglePinnedExpanded(p.id)}
+                        style={{
+                          background:'transparent',
+                          border:'none',
+                          fontWeight:600,
+                          fontSize:16,
+                          textAlign:'left',
+                          flex:1,
+                          cursor:'pointer',
+                          whiteSpace:'nowrap',
+                          overflow:'hidden',
+                          textOverflow:'ellipsis',
+                          minWidth: 0
+                        }}
+                      >
+                        {p.exercise}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {/* Unpin star (confirm) */}
+                      <button
+                        className="ghost"
+                        onClick={() => {
+                          if (confirm(`Unpin "${p.exercise}"?`)) unpinChart(p.id);
+                        }}
+                        title="Unpin"
+                        style={{ fontSize: 16, padding: '0px 0px', borderRadius: 8, minWidth: 30 }}
+                      >
+                        ★
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* expanded area contains controls + chart + bottom stats */}
+                {isExpanded && (
+                  <>
+                    <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <select value={p.config.range} onChange={e => updatePinnedConfig(p.id, { range: e.target.value })} style={{ padding: '6px 8px', borderRadius:8 }}>
+                          {RANGES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                        </select>
+                      </div>
+
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button className="ghost" onClick={() => updatePinnedConfig(p.id, { mode: '1rm' })} style={{ borderColor: p.config.mode === '1rm' ? 'var(--accent)' : undefined }}>1RM</button>
+                        <button className="ghost" onClick={() => updatePinnedConfig(p.id, { mode: 'weight' })} style={{ borderColor: p.config.mode === 'weight' ? 'var(--accent)' : undefined }}>Weight</button>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 10 }}>
+                      <canvas
+                        ref={el => { canvasRefs.current[key] = el; }}
+                        style={{ width: '100%', maxWidth: '100%', height: 160, display: 'block', boxSizing: 'border-box' }}
+                      />
+                    </div>
+
+                    {/* bottom stats split left/right */}
+                    <div style={{ display: 'flex', marginTop: 10 }}>
+                      <div style={{ flex: 1, display:'flex', justifyContent:'center' }}>
+                        <div style={{ textAlign:'center' }}>
+                          <div style={{ color:'var(--accent)', fontWeight:700 }}>{p.config.mode === 'weight' ? 'Heaviest' : 'Current 1RM'}</div>
+                          <div style={{ color:'var(--text)', fontWeight:800, fontSize:16 }}>
+                            {p.config.mode === 'weight'
+                              ? (sum.extra?.heaviest ? `${Math.round(sum.extra.heaviest.weight || sum.extra.heaviest.raw?.weight || 0)} lb × ${Math.round(sum.extra.heaviest.reps || sum.extra.heaviest.raw?.reps || 0)}` : '—')
+                              : (sum.current || 0)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ flex: 1, display:'flex', justifyContent:'center' }}>
+                        <div style={{ textAlign:'center' }}>
+                          <div style={{ color:'var(--accent)', fontWeight:700 }}>{p.config.mode === 'weight' ? 'Most reps' : 'All-time 1RM'}</div>
+                          <div style={{ color:'var(--text)', fontWeight:800, fontSize:16 }}>
+                            {p.config.mode === 'weight'
+                              ? (sum.extra?.mostReps ? `${Math.round(sum.extra.mostReps.reps || sum.extra.mostReps.raw?.reps || 0)} × ${Math.round(sum.extra.mostReps.weight || sum.extra.mostReps.raw?.weight || 0)} lb` : '—')
+                              : (sum.best || 0)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top-right persistent label — appears on hover or click */}
+                    {showMeta && (
+                      <div style={{
+                        position: 'absolute', right: 10, top: 10,
+                        background: 'var(--panel)', border: '1px solid var(--card-border)', padding: '8px 10px',
+                        borderRadius: 10, zIndex: 20, minWidth: 160, textAlign:'left'
+                      }}>
+                        <div style={{ color: 'var(--muted)', fontSize: 12 }}>{shortDate(new Date(showMeta.raw?.date || showMeta.t || Date.now()))}</div>
+                        <div style={{ fontWeight: 800, color: 'var(--secondary)', fontSize: 15, marginTop: 6 }}>
+                          {p.config.mode === 'weight'
+                            ? `${Math.round(showMeta.weight || showMeta.raw?.weight || 0)} lb × ${Math.round(showMeta.reps || showMeta.raw?.reps || 0)}`
+                            : `${Math.round(showMeta.v || calc1RM(showMeta.raw?.weight, showMeta.raw?.reps) || 0)} est 1RM`}
+                        </div>
+                        {p.config.mode !== 'weight' && (showMeta.raw?.weight || showMeta.raw?.reps) && (
+                          <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+                            {Math.round(showMeta.raw?.weight || 0)} lb × {String(showMeta.raw?.reps || '')}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
