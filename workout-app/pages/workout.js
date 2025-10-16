@@ -601,7 +601,7 @@ const lastByExercise = useMemo(() => {
               <div className="h2" style={{ margin: 0 }}>{ex.exercise}</div>
               {/* target reps (preserve secondary color) */}
               <div className="target-reps" style={{ marginTop: 6 }}>
-                Target: {ex.sets} × {ex.targetReps || '—'}
+                Target Reps: {ex.targetReps || '—'}
               </div>
             </div>
           </div>
