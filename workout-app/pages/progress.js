@@ -56,28 +56,52 @@ export default function Progress() {
   const [exerciseList, setExerciseList] = useState([]);
   const [dynamicInput, setDynamicInput] = useState('');
   const [dynamicName, setDynamicName] = useState('');
-  const [dynamicConfig, setDynamicConfig] = useState({ mode: '1rm', range: '3m' });
+  const [dynamicConfig, setDynamicConfig] = useState({ mode: '1rm', range: 'all' });
 
   // fixed cards config (mode & range) and collapsed state
   const [fixedConfigs, setFixedConfigs] = useState(() =>
-    FIXED_EXERCISES.map(e => ({ exercise: e, mode: '1rm', range: '3m', expanded: false }))
+    FIXED_EXERCISES.map(e => ({ exercise: e, mode: '1rm', range: 'all', expanded: false }))
   );
 
-  // pinned charts: array of { id, exercise, config: {mode, range}, expanded }
-  const [pinnedCharts, setPinnedCharts] = useState(() => {
-    try {
-      const fromStorage = (storage && typeof storage.getPinnedCharts === 'function')
-        ? storage.getPinnedCharts(user?.name)
-        : null;
-      if (Array.isArray(fromStorage)) return fromStorage;
-    } catch (e) {}
-    try {
-      const raw = localStorage.getItem(`pinnedCharts_${user?.name || 'anon'}`);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
+// pinned charts: array of { id, exercise, config: {mode, range}, expanded }
+// Normalizes stored data so missing fields default to range: 'all' and expanded: false
+const [pinnedCharts, setPinnedCharts] = useState(() => {
+  try {
+    const fromStorage = (storage && typeof storage.getPinnedCharts === 'function')
+      ? storage.getPinnedCharts(user?.name)
+      : null;
+if (Array.isArray(fromStorage)) {
+  // normalize and override defaults
+  return fromStorage.map(p => ({
+    id: p.id || `${(p.exercise||'pin').replace(/\s+/g,'_')}_${Date.now()}`,
+    exercise: p.exercise || '',
+    config: {
+      mode: p?.config?.mode || '1rm',
+      range: 'all' // always default to All Time on load
+    },
+    expanded: false // always start collapsed
+  }));
+}
+  } catch (e) {}
+  try {
+    const raw = localStorage.getItem(`pinnedCharts_${user?.name || 'anon'}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) {
+      return parsed.map(p => ({
+        id: p.id || `${(p.exercise||'pin').replace(/\s+/g,'_')}_${Date.now()}`,
+        exercise: p.exercise || '',
+        config: {
+          mode: p?.config?.mode || '1rm',
+          range: 'all'
+        },
+        expanded: false
+      }));
     }
-  });
+    return [];
+  } catch (e) {
+    return [];
+  }
+});
 
   // canvas refs & point caches
   const canvasRefs = useRef({});
@@ -121,13 +145,18 @@ export default function Progress() {
   }
 
   // add a pin
-  function pinChart(exercise, config) {
-    if (!exercise) return;
-    const id = `${exercise.replace(/\s+/g,'_')}_${Date.now()}`;
-    const newPinned = [...pinnedCharts, { id, exercise, config: { ...config }, expanded: false }];
-    setPinnedCharts(newPinned);
-    persistPinnedCharts(newPinned);
-  }
+// add a pin (ensures defaults for config and collapsed state)
+function pinChart(exercise, config = {}) {
+  if (!exercise) return;
+  const id = `${exercise.replace(/\s+/g,'_')}_${Date.now()}`;
+  const cfg = {
+    mode: config.mode || '1rm',
+    range: config.range || 'all'
+  };
+  const newPinned = [...pinnedCharts, { id, exercise, config: cfg, expanded: false }];
+  setPinnedCharts(newPinned);
+  persistPinnedCharts(newPinned);
+}
 
   // remove a pin by id (asks caller to confirm if needed)
   function unpinChart(id) {
