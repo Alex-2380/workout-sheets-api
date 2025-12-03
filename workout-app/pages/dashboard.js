@@ -355,9 +355,9 @@ export default function Dashboard() {
               {lastSession.exercises.map(ex => (
                 <div key={ex.name} className="card" style={{ padding: 12, marginBottom: 8, width: '100%', boxSizing: 'border-box' }}>
                   {/* exercise name - slightly smaller than previous (tuned down a bit) */}
-                  <div className="h2" style={{ margin: 0, fontSize: 17 }}>{ex.name}</div>
+                  <div className="h2" style={{ margin: 0, fontSize: 17, textAlign: 'left' }}>{ex.name}</div>
                   <div className="divider" />
-                  <div className="grid" style={{ gap: 8 }}>
+                  <div className="grid" style={{ gap: 8, textAlign: 'left' }}>
                     {ex.sets.map((st, i) => (
                       <div key={i} className="row" style={{ gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
                         <div className="set-label">Set {st.set}</div>
