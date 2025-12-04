@@ -53,18 +53,87 @@ export default function RoutineView() {
         <div className="card" key={d}>
           <div className="h2 day-title">Day {d}</div>
 
-
-
           <div className="divider" />
 
           <div className="grid exercises">
-            {byDay[d].map(ex => (
-              <div className="kpi" key={ex.exercise}>
-                <span className="exercise-name">{ex.exercise}</span>
-                {/* make BOTH sets × reps muted */}
-                <strong className="sr">{ex.sets} × {ex.targetReps || '—'}</strong>
-              </div>
-            ))}
+            {byDay[d].map(ex => {
+              const raw = ex.targetReps ?? '';
+              const val = String(raw);
+              const isMultiline = val.includes('\n');
+
+              // helper for pluralizing "Set(s)"
+              const setsCount = ex.sets ?? '';
+              const setsNum = Number(setsCount);
+              const setsLabel =
+                setsCount && !Number.isNaN(setsNum)
+                  ? `${setsCount} ${setsNum === 1 ? 'Set' : 'Sets'}`
+                  : (setsCount || '—');
+
+              return (
+                <div className="kpi" key={ex.exercise} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {/* TOP ROW: exercise name (flexible) + right-side top label (pinned to right) */}
+                  <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <span
+                      className="exercise-name"
+                      style={{
+                        flex: 1,
+                        minWidth: 0, // critical for ellipsis
+                        marginRight: 12,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title={ex.exercise}
+                    >
+                      {ex.exercise}
+                    </span>
+
+                    <div
+                      style={{
+                        // right-side top label only; no multiline content here so it won't affect ellipsis
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {/* Single-line: original "sets × targetReps" behavior */}
+                      {!isMultiline && (
+                        <strong className="sr">{ex.sets} × {val || '—'}</strong>
+                      )}
+
+                      {/* Multiline: show "N Set(s)" (right-aligned on the top row) */}
+                      {isMultiline && (
+                        <strong className="sr">{setsLabel}</strong>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SECOND ROW (only when multiline): spacer left, breakdown on right */}
+                  {isMultiline && (
+                    <div style={{ display: 'flex', width: '100%' }}>
+                      {/* left spacer: lines up under the exercise-name column */}
+                      <div style={{ flex: 1, minWidth: 0 }} />
+
+                      {/* right breakdown: sits under the top right label and is right-aligned */}
+                      <div
+                        className="target-reps-multiline"
+                        style={{
+                          marginLeft: 12,
+                          whiteSpace: 'pre-line',
+                          textAlign: 'right',
+                          fontSize: '0.95rem',
+                          color: 'var(--muted-color, #666)',
+                          wordBreak: 'break-word'
+                        }}
+                      >
+                        {val}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
