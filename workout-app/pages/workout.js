@@ -599,10 +599,36 @@ const lastByExercise = useMemo(() => {
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <div>
               <div className="h2" style={{ margin: 0 }}>{ex.exercise}</div>
-              {/* target reps (preserve secondary color) */}
-              <div className="target-reps" style={{ marginTop: 6 }}>
-                Target Reps: {ex.targetReps || '—'}
-              </div>
+{/* target reps (preserve secondary color) */}
+<div className="target-reps" style={{ marginTop: 6 }}>
+  {(() => {
+    const val = ex.targetReps || '';
+
+    const isMultiline = val.includes('\n');
+
+    if (!val) {
+      return <div>Target Reps: —</div>;
+    }
+
+    if (!isMultiline) {
+      // Single-line: keep inline
+      return (
+        <div>
+          Target Reps: {val}
+        </div>
+      );
+    }
+
+    // Multiline: "Target Reps:" on its own line + preserve breaks
+    return (
+      <div style={{ whiteSpace: 'pre-line' }}>
+        <strong>Target Reps:</strong>
+        {'\n'}
+        {val}
+      </div>
+    );
+  })()}
+</div>
             </div>
           </div>
 
