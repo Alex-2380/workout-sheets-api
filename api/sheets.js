@@ -13,9 +13,7 @@ export default async function handler(req, res) {
   try {
     const { tab } = req.query;
 
-    if (!tab) {
-      return res.status(400).json({ error: "Missing 'tab' query parameter" });
-    }
+    if (!tab) return res.status(400).json({ error: "Missing 'tab'" });
 
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
@@ -24,27 +22,20 @@ export default async function handler(req, res) {
       scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
 
-    // 🚨 Disable infinite retries
+    // Disable retries
     google.options({ retry: false });
 
     const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.SPREADSHEET_ID;
 
     const response = await withTimeout(
-      sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: tab,
-      }),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: tab }),
       8000
     );
 
     return res.status(200).json(response.data.values ?? []);
-  } catch (error) {
-    console.error("Sheets API error:", error.message);
-
-    // 👇 IMPORTANT: always respond
-    return res.status(503).json({
-      error: "Sheet data temporarily unavailable",
-    });
+  } catch (err) {
+    console.error("Sheets API error:", err.message);
+    return res.status(503).json({ error: "Sheet data temporarily unavailable" });
   }
 }
