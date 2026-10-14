@@ -69,46 +69,94 @@ export default function GolfCourseMap({
   const [rotation, setRotation] = useState(0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const svgRef = useRef(null);
+  const mapContentRef = useRef(null);
   const dragRef = useRef(null);
+  const pendingPanRef = useRef({ x: 0, y: 0 });
 
   const selectedTee = getTee(tees, selectedTeeId);
   const selectedCup = getCup(selectedCupId);
   const selectedHole = selectedTee && selectedCup ? holeFromPair(tees, selectedTee.id, selectedCup.id) : null;
-  const transform = `translate(${pan.x} ${pan.y}) translate(${MAP_VIEWBOX.width / 2} ${MAP_VIEWBOX.height / 2}) scale(${zoom}) rotate(${rotation}) translate(${-MAP_VIEWBOX.width / 2} ${-MAP_VIEWBOX.height / 2})`;
+  const buildTransform = (nextPan, nextZoom = zoom, nextRotation = rotation) =>
+  `translate(${nextPan.x} ${nextPan.y}) translate(${MAP_VIEWBOX.width / 2} ${MAP_VIEWBOX.height / 2}) scale(${nextZoom}) rotate(${nextRotation}) translate(${-MAP_VIEWBOX.width / 2} ${-MAP_VIEWBOX.height / 2})`;
 
-  const pointerDown = (event) => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    dragRef.current = { x: event.clientX, y: event.clientY, pan: { ...pan }, rect, moved: false };
-  };
+const transform = buildTransform(pan);
 
-  const pointerMove = (event) => {
-    const drag = dragRef.current;
-    if (!drag) return;
-    const dx = event.clientX - drag.x;
-    const dy = event.clientY - drag.y;
-    if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
-    setPan({
-      x: drag.pan.x + (dx * MAP_VIEWBOX.width) / drag.rect.width,
-      y: drag.pan.y + (dy * MAP_VIEWBOX.height) / drag.rect.height,
-    });
+const pointerDown = (event) => {
+  const rect = svgRef.current?.getBoundingClientRect();
+  if (!rect) return;
+
+  pendingPanRef.current = { ...pan };
+
+  dragRef.current = {
+    x: event.clientX,
+    y: event.clientY,
+    pan: { ...pan },
+    rect,
+    moved: false,
   };
 
-  const pointerUp = () => {
-    const drag = dragRef.current;
-    dragRef.current = null;
-    if (drag?.moved) setTimeout(() => { dragRef.current = { moved: true }; setTimeout(() => { dragRef.current = null; }, 0); }, 0);
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+};
+
+const pointerMove = (event) => {
+  const drag = dragRef.current;
+  if (!drag) return;
+
+  const dx = event.clientX - drag.x;
+  const dy = event.clientY - drag.y;
+
+  if (Math.abs(dx) + Math.abs(dy) > 4) {
+    drag.moved = true;
+  }
+
+  if (!drag.moved) return;
+
+  const nextPan = {
+    x: drag.pan.x + (dx * MAP_VIEWBOX.width) / drag.rect.width,
+    y: drag.pan.y + (dy * MAP_VIEWBOX.height) / drag.rect.height,
   };
 
-  const selectTee = (id) => {
-    if (dragRef.current?.moved) return;
-    onSelectTee?.(id);
-  };
-  const selectCup = (id) => {
-    if (dragRef.current?.moved) return;
-    onSelectCup?.(id);
-  };
+  pendingPanRef.current = nextPan;
+
+  // Update the SVG directly instead of re-rendering the entire React component.
+  if (mapContentRef.current) {
+    mapContentRef.current.setAttribute(
+      'transform',
+      buildTransform(nextPan)
+    );
+  }
+};
+
+const pointerUp = () => {
+  const drag = dragRef.current;
+  if (!drag) return;
+
+  if (drag.moved) {
+    // Commit the final position to React once, when dragging ends.
+    setPan(pendingPanRef.current);
+  }
+
+  dragRef.current = null;
+
+  if (drag.moved) {
+    // Prevent the drag from accidentally selecting a tee or cup.
+    dragRef.current = { moved: true };
+
+    setTimeout(() => {
+      dragRef.current = null;
+    }, 0);
+  }
+};
+
+const selectTee = (id) => {
+  if (dragRef.current?.moved) return;
+  onSelectTee?.(id);
+};
+
+const selectCup = (id) => {
+  if (dragRef.current?.moved) return;
+  onSelectCup?.(id);
+};
   const reset = () => { setZoom(1); setRotation(0); setPan({ x: 0, y: 0 }); };
 
   return (
@@ -142,7 +190,7 @@ export default function GolfCourseMap({
           <filter id="plan-shadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="8" stdDeviation="10" floodOpacity=".19" /></filter>
         </defs>
         <rect width="1178" height="1266" fill="#353940" />
-        <g transform={transform} filter="url(#plan-shadow)">
+        <g ref={mapContentRef} transform={transform}>
           {/* Property and landscape: traced from the provided mockup rather than generated imagery. */}
           <path d="M 54 22 L 190 20 L 1139 480 L 1134 1218 L 532 1218 L 84 1218 L 84 786 Z" fill="#ded7c8" stroke="#b5ad9d" strokeWidth="7" />
           <path d="M 84 50 L 190 50 L 196 56 L 134 548 L 94 548 Z" fill="#353940" opacity=".75" />
