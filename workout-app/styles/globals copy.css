@@ -1,0 +1,674 @@
+:root {
+  --bg: #0b0b0e;
+  --panel: #141419;
+  --text: #e9eaee;
+  --textmod: #0b0b0e;
+  --muted: #a8acb8;
+
+  /* THEME COLORS */
+  --accent: hsl(160, 100%, 50%);     /* Primary (default blue) */
+  --secondary: hsl(40, 100%, 50%);    /* Secondary (default red) */
+
+  --success: #4ade80;
+  --danger: #ef4444;
+
+  /* Dark mode surface tuning */
+  --card-border: rgba(255,255,255,.06);
+  --input-bg: #1c1f26;
+  --input-border: rgba(255,255,255,.10);
+  --kpi-bg: rgba(255,255,255,.04);
+
+  --btn-bg: #0f1218;
+  --btn-border: rgba(255,255,255,.10);
+  --btn-bg-hover: #141923;
+  --btn-bg-active: #0c0f14;
+
+  --radius: 16px;
+}
+
+:root[data-theme="light"] {
+  --bg: #c5c5c7;
+  --panel: #e1e1e3;
+  --text: #0b0b0e;
+  --textmod: #e9eaee;
+  --muted: #4a5561;
+
+  --accent: hsl(220, 100%, 50%);
+  --secondary: hsl(0, 100%, 50%);
+
+  --card-border: #aeaeb0;
+  --input-bg: #eceff3;
+  --input-border: #c7c7c9;
+  --kpi-bg: #e9eef6;
+
+  --btn-bg: #dde3ea;
+  --btn-border: #aeaeb0;
+  --btn-bg-hover: #d6dde6;
+  --btn-bg-active: #cfd6dd;
+}
+
+/* Reset / global */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* ensure background fills the notch area for ios PWA overlay */
+
+/* make viewport sizing robust in iOS PWAs (dynamic viewport) */
+html, body, #__next {
+  height: 100%;
+  min-height: 100dvh;               /* use dynamic viewport when available */
+  background-color: var(--bg);      /* explicit background-color helps in standalone mode */
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ensure main container doesn't get hidden under the status bar */
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  /* fallback for browsers without safe-area support */
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+}
+
+/* if you have a top toolbar that should reach into the notch area */
+.toolbar {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--text);
+}
+a { color: inherit; text-decoration: none; }
+
+button, .action {
+  border: none;
+  cursor: pointer;
+  background: none;
+  color: inherit;
+  font: inherit;
+  transition: transform .06s ease, filter .2s ease, background .2s ease;
+}
+
+/* Inputs */
+input, select, textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  outline: none;
+}
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  line-height: 1;
+}
+
+/* Layout */
+.container { max-width: 860px; margin: 0 auto; padding: 16px; }
+
+/* Card */
+.card {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 16px;
+  border: 1px solid var(--card-border);
+}
+
+/* Typography */
+.h1 { font-weight: 700; font-size: 28px; letter-spacing: -0.02em; }
+.h2 { font-weight: 700; font-size: 20px; margin: 0 0 8px 0; }
+.muted { color: var(--muted); }
+
+/* Grid helpers */
+.grid { display: grid; gap: 12px; }
+.grid-2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+
+/* Primary button */
+.primary {
+  background: var(--accent);
+  color: #0b0b0e;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+:root[data-theme="light"] .primary {
+  color: var(--textmod);
+}
+
+.primary:hover { filter: brightness(1.05); }
+.primary:active { transform: translateY(1px) scale(.98); }
+
+/* Ghost / secondary button */
+.ghost {
+  background: transparent;
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.secondary {
+  background: var(--secondary);
+  color: #0b0b0e;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 700;
+  text-align: center;
+}
+.ghost:hover, .secondary:hover { filter: brightness(1.03); }
+.ghost:active, .secondary:active { transform: translateY(1px) scale(.98); }
+.ghost:focus, .secondary:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Unified action button */
+.action {
+  display: inline-block;
+  background: var(--btn-bg);
+  color: var(--accent);
+  border: 1px solid var(--btn-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 700;
+  text-align: center;
+}
+.action:hover { background: var(--btn-bg-hover); }
+.action:active { background: var(--btn-bg-active); transform: translateY(1px) scale(.98); }
+.action:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Tool chips */
+.tool-chip {
+  background: var(--panel);
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+.tool-chip:hover { filter: brightness(1.03); }
+.tool-chip:active { transform: translateY(1px) scale(.98); }
+.tool-chip:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.badge { display: inline-block; font-size: 12px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.06); }
+:root[data-theme="light"] .badge { background: #f0f6ff; }
+
+/* Toolbar */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: linear-gradient(to bottom, rgba(11,11,14,.92), rgba(11,11,14,.76) 65%, transparent);
+  backdrop-filter: blur(10px);
+}
+:root[data-theme="light"] .toolbar {
+  background: linear-gradient(to bottom, #c5c5c7, #c5c5c7 80%, transparent);
+}
+
+/* Other helpers */
+.row { display: grid; grid-template-columns: 1fr 80px 80px; gap: 8px; }
+.kpi { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-radius:12px; background: var(--kpi-bg); }
+
+.fade-in { animation: fadeIn .24s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px)} to {opacity: 1; transform: none} }
+
+.divider { height: 1px; background: rgba(255,255,255,.08); margin: 12px 0; }
+:root[data-theme="light"] .divider { background: var(--card-border); }
+
+.footer-space { height: 80px; }
+
+/* ---------- Color picker (authoritative, replace previous rules) ---------- */
+
+/* Default (dark-mode style / fallback) */
+.color-bar-container {
+  position: relative;
+  width: 100%;
+  height: 25px;
+  border-radius: 16px;
+  margin: 12px 0;
+  overflow: visible;
+
+  /* smooth hue progression using the chosen S/L for dark mode (100% / 50%) */
+  background: linear-gradient(
+    to right,
+    hsl(0, 100%, 50%),
+    hsl(30, 100%, 50%),
+    hsl(60, 100%, 50%),
+    hsl(120, 100%, 50%),
+    hsl(180, 100%, 50%),
+    hsl(210, 100%, 50%),
+    hsl(240, 100%, 50%),
+    hsl(300, 100%, 50%),
+    hsl(360, 100%, 50%)
+  );
+}
+
+/* Light-mode variant: same hue progression but with the lighter-mode S/L (100% / 40%) */
+:root[data-theme="light"] .color-bar-container {
+  background: linear-gradient(
+    to right,
+    hsl(0, 100%, 40%),
+    hsl(30, 100%, 40%),
+    hsl(60, 100%, 40%),
+    hsl(120, 100%, 40%),
+    hsl(180, 100%, 40%),
+    hsl(210, 100%, 40%),
+    hsl(240, 100%, 40%),
+    hsl(300, 100%, 40%),
+    hsl(360, 100%, 40%)
+  );
+}
+
+/* Strongly-specific handle rules so nothing else can accidentally change size */
+.color-bar-container .color-slider {
+  position: absolute;
+  left: 0;                      /* inline style will set percentage left */
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px !important;       /* enforce consistent width */
+  height: 35px !important;      /* enforce consistent height */
+  min-width: 10px;
+  min-height: 28px;
+  border-radius: 6px;
+  background: #111;
+  border: 1px solid var(--accent);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  cursor: pointer;
+  touch-action: none;
+  transition: left 0.05s linear, transform .08s ease;
+  z-index: 2;
+}
+
+/* Override if .secondary accidentally targets the color-slider element */
+.color-bar-container .color-slider.secondary {
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--secondary);
+  width: 10px !important;
+  height: 35px !important;
+  min-width: 10px !important;
+  min-height: 28px !important;
+  border-radius: 6px !important;
+  transform: translate(-50%, -50%) !important; /* ensure centering */
+  top: 50% !important;
+}
+
+/* Shade-slider variant (reuses sizing of .color-slider) */
+.color-bar-container .color-slider.shade {
+  /* keep same size / centering as the regular slider, but higher z so it sits above gradients */
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px !important;
+  height: 35px !important;
+  min-width: 10px;
+  min-height: 28px;
+  border-radius: 6px;
+  background: #111;
+  border: 1px solid var(--accent);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  cursor: pointer;
+  touch-action: none;
+  transition: left 0.05s linear, transform .08s ease;
+  z-index: 3;
+}
+
+/* Secondary shade handle should use secondary border */
+.color-bar-container .color-slider.shade.secondary {
+  border: 1px solid var(--secondary);
+}
+
+/* Keep the small active/focus affordance for shade sliders */
+.color-bar-container .color-slider.shade:active,
+.color-bar-container .color-slider.shade:focus {
+  transform: translate(-50%, -50%) scale(1.04);
+  outline: none;
+}
+
+/* Small active / focus affordance */
+.color-bar-container .color-slider:active,
+.color-bar-container .color-slider:focus {
+  transform: translate(-50%, -50%) scale(1.04);
+  outline: none;
+}
+
+/* Theme application: target-reps in secondary color */
+.target-reps { color: var(--secondary); padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+
+/* Accent the "Set X" labels everywhere (workout + summary) */
+.set-label { color: var(--accent); font-weight: 800; }
+
+/* Previous data: semi-transparent gray */
+.prev-data { color: var(--muted); opacity: .55; }
+
+/* Inputs bigger/bolder */
+.sets-area input.set-input {
+  color: var(--text);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+/* Make the whole left area obviously tappable */
+.copy-area { cursor: pointer; }
+.copy-area:hover { filter: brightness(1.03); }
+
+/* helpers */
+.text-accent { color: var(--accent); }
+.text-secondary { color: var(--secondary); }
+.border-accent { border-color: var(--accent) !important; }
+.border-secondary { border-color: var(--secondary) !important; }
+.value-secondary { color: var(--secondary); font-weight: 700; }
+
+/* Full-screen centered container */
+.full-screen-center {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 30;
+  background: transparent;
+}
+
+/* Slightly larger welcome card */
+.welcome-card {
+  max-width: 560px;
+  width: 92%;
+  padding: 20px;
+}
+
+/* Slow/longer fade used for welcome/login/dashboard to feel classy */
+.fade-in-slow {
+  animation: fadeInLong 1.05s ease both;
+}
+@keyframes fadeInLong {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* -------- Bottom Sheet (Summary) : anchored, nearly-full-height, single scroll -------- */
+
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;    /* center horizontally */
+  background: rgba(0,0,0,0.64);
+  backdrop-filter: blur(18px);
+  z-index: 1200;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+:root[data-theme="light"] .sheet-overlay {
+  background: rgba(0,0,0,0.0);
+  backdrop-filter: blur(0px);
+}
+
+/* fixed sheet anchored bottom, nearly full viewport height */
+.sheet-card {
+  width: calc(100% - 0px);      /* left + right padding */
+  max-width: 1040px;
+  max-height: calc(100vh - 72px); /* nearly full height */
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-top: 1px solid var(--card-border);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -28px 64px rgba(0,0,0,0.6);
+  padding: 16px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.sheet-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-bottom: 100px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* slide-up animation */
+.slide-up {
+  animation: sheetUp .28s cubic-bezier(.2,.85,.25,1) both;
+}
+@keyframes sheetUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* muted label + value spacing inside KPIs inside sheet */
+.sheet-card .kpi span { color: var(--muted); margin-right: 10px; font-size: 13px; }
+.sheet-card .kpi strong { color: var(--text); }
+
+/* actions: sticky (always visible) at the bottom of the sheet */
+.modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 6px;
+  border-top: 1px solid var(--card-border);
+  background: linear-gradient(to top, var(--panel) 88%, rgba(0,0,0,0));
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+/* tiny helper to ensure last child isn't clipped */
+.sheet-body > *:last-child { margin-bottom: 8px; }
+
+/* keep summary numbers in secondary color */
+.value-secondary { color: var(--secondary); }
+
+/* achievements list */
+.clean-list { list-style: none; padding: 0; margin: 0; }
+.clean-list li { padding: 6px 0; border-bottom: 1px solid var(--card-border); }
+.clean-list li:last-child { border-bottom: 0; }
+
+.sheet-body .card.achievements li {
+  color: var(--muted);       /* muted gray for label */
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.sheet-body .card.achievements .h2 {
+  color: var(--secondary);   /* secondary color for actual achievements */
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 1.4;
+}
+
+/* Dashboard layout tweaks (scoped) */
+.dashboard { padding-top: 20px; }
+
+/* KPI label: muted & small */
+.dashboard .card.kpi span {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* KPI value: match weight/scale of buttons/h2 family but not huge */
+.dashboard .card.kpi strong {
+  color: var(--text);
+  font-size: 16px;      /* matches visual rhythm with buttons */
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+/* Stack & center layout for the two top KPI cards */
+.dashboard .card.kpi.kpi--center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+/* Slightly more breathing room for KPI cards */
+.dashboard .card.kpi {
+  padding: 18px 16px;
+  min-height: 50px;
+}
+
+/* Current routine value colored secondary for emphasis */
+.dashboard .card.kpi.current-routine strong {
+  color: var(--secondary);
+}
+
+/* Actions spacing */
+.dashboard .grid.actions { margin-top: 18px; }
+
+/* Responsive: on very narrow screens keep them stacked */
+@media (max-width: 640px) {
+  .dashboard .grid-2 { grid-template-columns: 1fr; gap: 10px; }
+}
+
+.title-accent { color: var(--accent); margin: 0; }
+
+/* --- Routine header stays primary, centered --- */
+.routine-page .header-card { text-align: center; padding: 12px; }
+.routine-page .title-accent { color: var(--accent); margin: 0; }
+
+/* Day title = secondary */
+.routine-page .day-title { color: var(--secondary); margin: 0 0 6px 0; }
+
+/* Slightly tighter cards + grid */
+.routine-page .card { padding: 12px; }
+.routine-page .card .grid.exercises { gap: 8px; }
+
+/* Prevent squish; adjust sizes */
+.routine-page .kpi { padding: 10px 12px; min-width: 0; }
+.routine-page .kpi span { font-size: 14px; }
+
+/* Exercise name slightly thicker */
+.routine-page .kpi .exercise-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600; /* a touch thicker */
+}
+
+/* Make BOTH sets × reps muted gray */
+.routine-page .kpi .sr {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.sr {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+/* prev-page: spacing + summary-like layout */
+.prev-page { padding-top: 12px; }
+
+.prev-page .header-card { text-align: center; padding: 12px; margin-bottom: 30px;}
+.prev-page .page-title { font-size: 20px; font-weight: 700; }
+
+.prev-page .session-card { margin-bottom: 2px; overflow: visible; }
+.prev-page .session-header { width: 100%; text-align: left; }
+.prev-page .session-body { padding-top: 8px; }
+
+/* use the same card + grid rhythm as the workout summary */
+.prev-page .session-body .card { padding: 12px; margin-bottom: 8px; }
+.prev-page .session-body .h2 { font-size: 18px; margin-bottom: 6px; }
+
+/* keep the same set/weight/reps styling as summary */
+.prev-page .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; }
+.prev-page .set-label { color: var(--accent); font-weight: 800; }
+.prev-page .value-secondary { color: var(--secondary); font-weight: 800; }
+.prev-page .muted { color: var(--muted); font-size: 13px; }
+
+/* small screens */
+@media (max-width:640px) {
+  .prev-page .row { grid-template-columns: 1fr 1fr; }
+  .prev-page .session-body .card { padding-left: 10px; padding-right: 10px; }
+}
+
+/* ---------- Backyard Golf ---------- */
+.golf-page { display: grid; gap: 14px; padding-bottom: 24px; }
+.golf-hero { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; overflow: hidden; position: relative; background: linear-gradient(125deg, var(--panel), color-mix(in srgb, var(--panel) 82%, #1b673e)); }
+.golf-hero::after { content: ''; width: 230px; height: 230px; border: 1px solid rgba(170, 232, 159, .17); border-radius: 50%; position: absolute; right: -72px; bottom: -150px; box-shadow: 0 0 0 34px rgba(170, 232, 159, .04), 0 0 0 68px rgba(170, 232, 159, .03); pointer-events: none; }
+.golf-hero h1 { margin: 2px 0 6px; font-size: clamp(28px, 5vw, 39px); letter-spacing: -.04em; }
+.golf-hero p { margin: 0; max-width: 580px; color: var(--muted); line-height: 1.45; }
+.golf-hero-status { position: relative; z-index: 1; display: grid; gap: 8px; justify-items: end; text-align: right; }
+.golf-user { color: var(--muted); font-size: 13px; }
+.golf-eyebrow { color: #8ddb82; font-size: 11px; font-weight: 800; letter-spacing: .12em; line-height: 1.3; }
+:root[data-theme="light"] .golf-eyebrow { color: #276728; }
+.golf-tabs { display: flex; overflow-x: auto; gap: 6px; padding: 2px 1px 6px; scrollbar-width: none; }
+.golf-tabs::-webkit-scrollbar { display: none; }
+.golf-tabs button { white-space: nowrap; border: 1px solid var(--input-border); border-radius: 999px; padding: 9px 13px; background: var(--panel); color: var(--muted); font-size: 13px; }
+.golf-tabs button.is-active { background: #3d863b; color: white; border-color: #4b9847; font-weight: 800; }
+.golf-notice { border: 1px solid rgba(142, 220, 129, .28); color: var(--text); background: rgba(78, 146, 59, .12); padding: 11px 13px; border-radius: 12px; font-size: 14px; }
+.golf-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.golf-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.golf-action-card { border: 1px solid var(--card-border); background: var(--panel); border-radius: var(--radius); padding: 17px; text-align: left; min-height: 112px; display: grid; align-content: space-between; gap: 18px; }
+.golf-action-card:hover { transform: translateY(-1px); border-color: rgba(141, 219, 130, .45); background: color-mix(in srgb, var(--panel) 92%, #347b37); }
+.golf-action-card strong { font-size: 17px; }
+.golf-action-card span { color: var(--muted); font-size: 13px; }
+.golf-resume-card, .golf-summary-card, .golf-sync-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.golf-resume-card h2, .golf-summary-card h2 { margin: 4px 0; }
+.golf-resume-card p, .golf-summary-card p, .golf-sync-card p { margin: 0; line-height: 1.45; }
+.golf-sync-card { grid-column: 1 / -1; padding: 13px 16px; }
+.golf-section-heading { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+.golf-section-heading h2 { margin: 3px 0 0; font-size: 21px; }
+.golf-choice-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.golf-choice { border: 1px solid var(--input-border); border-radius: 10px; background: var(--input-bg); padding: 9px 11px; font-size: 13px; }
+.golf-choice.is-active { color: #fff; border-color: #62a653; background: #3f843e; font-weight: 800; }
+.golf-player-fields { display: grid; gap: 9px; max-width: 520px; }
+.golf-player-fields input { width: 100%; }
+.golf-field-label, .golf-form-grid label, .golf-map-selects label, .golf-inline-select { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.golf-field-label select { max-width: 250px; }
+.golf-course-play-list { display: grid; gap: 10px; }
+.golf-course-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; border-top: 1px solid var(--card-border); padding: 12px 0 2px; }
+.golf-course-row strong { display: block; font-size: 16px; }
+.golf-course-row span, .golf-course-row p { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.golf-preview { display: grid; gap: 14px; margin-top: 14px; padding: 13px; border-radius: 12px; background: var(--kpi-bg); }
+.golf-preview-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; font-size: 13px; }
+.golf-preview-list span { padding: 8px; border-radius: 9px; background: var(--panel); }
+.golf-preview-list em { color: #8ddb82; font-style: normal; white-space: nowrap; }
+.golf-map-shell { position: relative; overflow: hidden; border: 1px solid var(--card-border); background: #e6e1d4; border-radius: var(--radius); min-width: 0; }
+.golf-map { display: block; width: 100%; height: auto; aspect-ratio: 1178 / 1266; touch-action: none; user-select: none; cursor: grab; }
+.golf-map:active { cursor: grabbing; }
+.golf-map-toolbar { position: absolute; z-index: 2; top: 10px; left: 10px; display: flex; gap: 5px; padding: 5px; border-radius: 11px; background: rgba(21, 25, 21, .78); box-shadow: 0 4px 15px rgba(0, 0, 0, .22); }
+.golf-map-control { min-width: 32px; height: 31px; border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .1); border-radius: 8px; color: white; font-size: 16px; }
+.golf-map-control-wide { min-width: auto; padding: 0 9px; font-size: 11px; font-weight: 700; }
+.golf-map-key { position: absolute; z-index: 2; left: 12px; bottom: 11px; display: flex; flex-wrap: wrap; gap: 8px; padding: 7px 9px; color: #fcfffb; border-radius: 9px; background: rgba(21, 25, 21, .78); font-size: 11px; }
+.golf-map-key span { display: inline-flex; align-items: center; gap: 4px; }
+.golf-map-key i { display: inline-block; width: 10px; height: 10px; }
+.key-tee { border-radius: 50%; background: #f5ce4c; border: 2px solid #263c2b; }.key-cup { border-radius: 50%; background: #fff; border: 2px solid #397d3a; }.key-hill { height: 3px !important; border-radius: 5px; background: #2f7a34; }
+.golf-site-label { fill: #ffffff; font-size: 30px; font-weight: 600; paint-order: stroke; stroke: rgba(47, 54, 57, .36); stroke-width: 3px; }.golf-site-label-small { font-size: 20px; }.golf-pool-label { fill: #fff; font-size: 35px; font-weight: 600; }.golf-dimension-label { fill: #f4fff0; font-size: 27px; font-weight: 700; letter-spacing: .02em; }
+.golf-cup-marker, .golf-tee-marker { cursor: pointer; }.golf-cup-ring { fill: #f8fff5; stroke: #34793c; stroke-width: 5px; }.golf-cup-center { fill: #25492a; }.golf-flag { fill: #f4d34e; stroke: #d7ab28; stroke-width: 1px; }.golf-tee-ring { fill: #ffffff; stroke: #2b5730; stroke-width: 5px; }.golf-tee-center { fill: #f2ca46; stroke: #8d6e13; stroke-width: 2px; }.golf-tee-stem { fill: #e1b729; stroke: #80630e; stroke-width: 1px; }.golf-marker-label { fill: #1d2420; font-size: 20px; font-weight: 800; paint-order: stroke; stroke: #fcfff9; stroke-width: 5px; stroke-linejoin: round; }.golf-cup-marker.is-selected .golf-cup-ring, .golf-tee-marker.is-selected .golf-tee-ring { stroke: #f5a524; stroke-width: 8px; }.golf-shot-line line { stroke: #f4b832; stroke-width: 7px; stroke-dasharray: 15 12; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35)); }.golf-distance-pill { fill: rgba(19, 37, 20, .9); stroke: #f4b832; stroke-width: 2px; }.golf-distance-text { fill: #fff; font-size: 18px; font-weight: 800; }.golf-distance-source { fill: #d5e7d0; font-size: 9px; font-weight: 800; letter-spacing: .1em; }
+.golf-active-hole { display: grid; grid-template-columns: minmax(220px, .65fr) minmax(0, 1.35fr); gap: 12px; align-items: stretch; }.golf-hole-details { display: grid; align-content: center; }.golf-hole-details h2 { margin: 4px 0; }.golf-distance-large { margin: 12px 0 5px; color: #8ddb82; font-size: clamp(31px, 5vw, 48px); font-weight: 800; letter-spacing: -.04em; }.golf-round-header { display: flex; justify-content: space-between; align-items: center; gap: 14px; }.golf-round-header h2 { margin: 3px 0; }.golf-round-header p { margin: 0; color: var(--muted); }.golf-hole-nav { display: flex; gap: 8px; }.golf-hole-nav button:disabled { opacity: .42; cursor: not-allowed; }
+.golf-scorecard-wrap { overflow-x: auto; padding-bottom: 4px; }.golf-scorecard { width: 100%; min-width: 610px; border-collapse: separate; border-spacing: 3px; text-align: center; font-size: 13px; }.golf-scorecard th, .golf-scorecard td { padding: 8px 7px; background: var(--kpi-bg); border-radius: 7px; white-space: nowrap; }.golf-scorecard th:first-child { min-width: 88px; text-align: left; }.golf-scorecard thead th { background: #315d32; color: #fff; }.golf-scorecard .is-current { box-shadow: inset 0 0 0 2px #e2b33d; }.golf-scorecard-detail-row { color: var(--muted); }.golf-scorecard-distance-row { font-size: 11px; }.golf-score-input { width: 42px; min-width: 42px; padding: 6px 4px; text-align: center; border-radius: 7px; }.golf-score-total { color: #8ddb82; font-weight: 800; }.golf-under-par { color: #7fda80; font-weight: 800; }.golf-over-par { color: #f0a4a4; font-weight: 800; }
+.golf-empty-state { display: grid; place-items: center; text-align: center; gap: 10px; padding: 35px; }.golf-empty-state h2, .golf-empty-state p { margin: 0; }
+.golf-course-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }.golf-course-card { display: flex; min-height: 215px; flex-direction: column; justify-content: space-between; gap: 14px; padding: 15px; border: 1px solid var(--card-border); border-radius: 13px; background: var(--kpi-bg); }.golf-course-card h3 { margin: 9px 0 6px; font-size: 18px; }.golf-course-card p { margin: 0 0 4px; line-height: 1.4; font-size: 13px; }.golf-course-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }.golf-course-card-actions .ghost, .golf-course-card-actions .action { padding: 8px 9px; font-size: 12px; }
+.golf-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }.golf-form-grid input, .golf-form-grid select { width: 100%; }.golf-builder-add { display: flex; gap: 8px; margin: 15px 0 9px; }.golf-builder-add select { flex: 1; }.golf-builder-holes { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }.golf-builder-holes li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 10px; background: var(--kpi-bg); border-radius: 9px; font-size: 14px; }.golf-text-button { color: #8ddb82; font-size: 13px; }.golf-danger-button { border: 1px solid rgba(240, 121, 121, .45); color: #f49b9b; border-radius: 10px; padding: 9px 12px; background: rgba(191, 63, 63, .09); }.golf-builder-holes + .golf-danger-button { margin-top: 14px; }
+.golf-map-page-grid { grid-template-columns: minmax(0, 1.25fr) minmax(270px, .75fr); align-items: start; }.golf-map-page-grid > .golf-map-shell { grid-row: span 2; }.golf-map-inspector { display: grid; align-content: start; }.golf-map-selects { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }.golf-map-selects select { width: 100%; }.golf-editor-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.golf-inline-select { min-width: 185px; }.golf-inline-select select { width: 100%; }.golf-leaderboard { display: grid; gap: 6px; }.golf-leaderboard-row { display: grid; grid-template-columns: 32px 1fr 90px 120px; align-items: center; gap: 8px; padding: 10px; background: var(--kpi-bg); border-radius: 10px; font-size: 14px; }.golf-rank { color: #8ddb82; font-weight: 800; }.golf-leaderboard-row em { color: var(--muted); font-size: 12px; font-style: normal; }.golf-history-list { display: grid; gap: 7px; }.golf-history-row { display: flex; justify-content: space-between; text-align: left; gap: 15px; padding: 11px 12px; background: var(--kpi-bg); border: 1px solid transparent; border-radius: 10px; font-size: 13px; }.golf-history-row:hover { border-color: rgba(141, 219, 130, .35); }.golf-history-row strong, .golf-history-row small { display: block; }.golf-history-row small { color: var(--muted); margin-top: 3px; }.golf-history-score h3 { margin: 0 0 8px; }.golf-back-link { text-align: center; color: var(--muted); font-size: 13px; margin-top: 5px; }.golf-back-link a { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 680px) {
+  .golf-hero { display: grid; }.golf-hero-status { justify-items: start; text-align: left; }.golf-home-grid, .golf-map-page-grid { grid-template-columns: 1fr; }.golf-map-page-grid > .golf-map-shell { grid-row: auto; }.golf-action-grid, .golf-course-grid { grid-template-columns: 1fr; }.golf-summary-card, .golf-resume-card, .golf-sync-card, .golf-round-header { align-items: flex-start; flex-direction: column; }.golf-preview-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }.golf-active-hole { grid-template-columns: 1fr; }.golf-form-grid, .golf-map-selects { grid-template-columns: 1fr; }.golf-builder-add { display: grid; }.golf-inline-select { min-width: 0; width: 100%; }.golf-section-heading:has(.golf-inline-select) { display: grid; }.golf-leaderboard-row { grid-template-columns: 25px 1fr 64px; }.golf-leaderboard-row .muted { display: none; }.golf-history-row { flex-direction: column; gap: 6px; }.golf-map-key { font-size: 10px; }.golf-site-label { font-size: 35px; }.golf-site-label-small { font-size: 23px; }.golf-marker-label { font-size: 24px; }.golf-dimension-label { font-size: 30px; }
+}
+
+@media (max-width: 460px) {
+  .header-links { gap: 4px !important; flex-wrap: wrap; justify-content: flex-end; }
+  .header-links .tool-chip { padding: 6px 8px; font-size: 12px; }
+}

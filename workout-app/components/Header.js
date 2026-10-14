@@ -94,7 +94,7 @@ export default function Header({ onToggleTools }) {
             MaxLift
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="header-links" style={{ display: 'flex', gap: 8 }}>
             <button className="tool-chip" onClick={onToggleTools}>Tools</button>
             <Link href="/settings" className="tool-chip">Settings</Link>
             <Link href="/dashboard" className="tool-chip">Dashboard</Link>

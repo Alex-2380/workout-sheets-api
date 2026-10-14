@@ -419,6 +419,7 @@ export default function Dashboard() {
         <Link className="action" href="/workout">Start a Workout</Link>
         <Link className="action" href="/progress">Progress</Link>
         <Link className="action" href="/change-routine">Change Routine</Link>
+ 	<Link className="action" href="/golf">Backyard Golf</Link>
       </div>
     </div>
   );
