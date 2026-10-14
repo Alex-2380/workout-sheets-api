@@ -615,7 +615,7 @@ select {
 .golf-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
