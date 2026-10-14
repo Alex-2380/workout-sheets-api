@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react';
-import { CUP_MARKERS, MAP_VIEWBOX, formatDistance, getCup, getTee, holeFromPair } from '../utils/golfCourse';
+import {
+  CUP_MARKERS,
+  MAP_VIEWBOX,
+  formatDistance,
+  getCup,
+  getTee,
+  holeFromPair,
+} from '../utils/golfCourse';
 
 const TURF_PATH = 'M 196 56 L 715 301 L 660 548 L 134 548 Z';
 const HOUSE_PATH = 'M 457 398 L 542 398 L 542 377 L 605 377 L 605 398 L 688 398 L 688 418 L 786 462 L 1082 615 L 1082 1001 L 781 1001 L 781 685 L 457 685 Z';
@@ -56,12 +63,14 @@ function TeeMarker({ tee, selected, onSelect, visible }) {
 
 export default function GolfCourseMap({
   tees = [],
+  cups = CUP_MARKERS,
   selectedTeeId,
   selectedCupId,
   onSelectTee,
   onSelectCup,
   showTees = true,
   showMeasurements = true,
+  showOnlySelectedMarkers = false,
   units = 'yards',
   className = '',
 }) {
@@ -74,8 +83,18 @@ export default function GolfCourseMap({
   const pendingPanRef = useRef({ x: 0, y: 0 });
 
   const selectedTee = getTee(tees, selectedTeeId);
-  const selectedCup = getCup(selectedCupId);
-  const selectedHole = selectedTee && selectedCup ? holeFromPair(tees, selectedTee.id, selectedCup.id) : null;
+const selectedCup = getCup(selectedCupId, cups);
+
+const selectedHole =
+  selectedTee && selectedCup
+    ? holeFromPair(
+        tees,
+        selectedTee.id,
+        selectedCup.id,
+        {},
+        cups
+      )
+    : null;
   const buildTransform = (nextPan, nextZoom = zoom, nextRotation = rotation) =>
   `translate(${nextPan.x} ${nextPan.y}) translate(${MAP_VIEWBOX.width / 2} ${MAP_VIEWBOX.height / 2}) scale(${nextZoom}) rotate(${nextRotation}) translate(${-MAP_VIEWBOX.width / 2} ${-MAP_VIEWBOX.height / 2})`;
 
@@ -227,8 +246,30 @@ const selectCup = (id) => {
               )}
             </g>
           )}
-          {CUP_MARKERS.map(cup => <CupMarker key={cup.id} cup={cup} selected={selectedCupId === cup.id} onSelect={selectCup} />)}
-          {tees.map(tee => <TeeMarker key={tee.id} tee={tee} selected={selectedTeeId === tee.id} onSelect={selectTee} visible={showTees} />)}
+         {(showOnlySelectedMarkers
+  ? cups.filter(cup => cup.id === selectedCupId)
+  : cups
+).map(cup => (
+  <CupMarker
+    key={cup.id}
+    cup={cup}
+    selected={selectedCupId === cup.id}
+    onSelect={selectCup}
+  />
+))}
+
+{(showOnlySelectedMarkers
+  ? tees.filter(tee => tee.id === selectedTeeId)
+  : tees
+).map(tee => (
+  <TeeMarker
+    key={tee.id}
+    tee={tee}
+    selected={selectedTeeId === tee.id}
+    onSelect={selectTee}
+    visible={showTees}
+  />
+))}
         </g>
       </svg>
       <div className="golf-map-key" aria-label="Map legend">

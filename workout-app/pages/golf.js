@@ -82,19 +82,32 @@ export default function GolfPage() {
     golfSheets.loadRounds(user.name)
       .then(remote => {
         let merged = local;
-        const remoteStamp = new Date(remote.layout?.updatedAt || 0).getTime();
-        const localStamp = new Date(local.updatedAt || 0).getTime();
-        if (remote.layout && remoteStamp > localStamp) {
-          merged = golfStorage.save(user.name, {
-            ...local,
-            tees: Array.isArray(remote.layout.tees) ? remote.layout.tees : local.tees,
-            courses: Array.isArray(remote.layout.courses) ? remote.layout.courses : local.courses,
-            updatedAt: remote.layout.updatedAt,
-          });
-        }
-        if (Array.isArray(remote.rounds) && remote.rounds.length) merged = golfStorage.mergeRemoteRounds(user.name, remote.rounds);
-        setProfile(merged);
-        setSyncStatus('Google Sheets connected');
+
+if (remote.layout) {
+  merged = golfStorage.save(user.name, {
+    ...local,
+    tees:
+      Array.isArray(remote.layout.tees)
+        ? remote.layout.tees
+        : local.tees,
+    cups:
+      Array.isArray(remote.layout.cups)
+        ? remote.layout.cups
+        : local.cups,
+    courses:
+      Array.isArray(remote.layout.courses)
+        ? remote.layout.courses
+        : local.courses,
+    updatedAt: remote.layout.updatedAt || new Date().toISOString(),
+  });
+}
+
+if (Array.isArray(remote.rounds)) {
+  merged = golfStorage.mergeRemoteRounds(user.name, remote.rounds);
+}
+
+setProfile(merged);
+setSyncStatus('Google Sheets connected');
       })
       .catch(() => setSyncStatus('Saved on this device'));
   }, []);
@@ -107,9 +120,18 @@ export default function GolfPage() {
 
   const activeRound = useMemo(() => profile?.rounds.find(round => round.id === profile.activeRoundId && round.status === 'active') || null, [profile]);
   const selectedTee = useMemo(() => getTee(profile?.tees, selectedTeeId), [profile, selectedTeeId]);
-  const selectedCup = useMemo(() => getCup(selectedCupId), [selectedCupId]);
-  const selectedMapHole = profile && selectedTee && selectedCup
-    ? materializeCourse({ holes: [[selectedTee.id, selectedCup.id]] }, profile.tees)[0]
+  const selectedCup = useMemo(
+  () => getCup(selectedCupId, profile?.cups || CUP_MARKERS),
+  [selectedCupId, profile?.cups]
+);
+
+const selectedMapHole =
+  profile && selectedTee && selectedCup
+    ? materializeCourse(
+        { holes: [[selectedTee.id, selectedCup.id]] },
+        profile.tees,
+        profile.cups || CUP_MARKERS
+      )[0]
     : null;
 
   const saveRound = (round, mirror = true) => {
@@ -124,12 +146,12 @@ export default function GolfPage() {
     return saved;
   };
 
-  const layoutSnapshot = state => ({
-    tees: state.tees,
-    cups: CUP_MARKERS,
-    courses: state.courses,
-    updatedAt: state.updatedAt || new Date().toISOString(),
-  });
+const layoutSnapshot = state => ({
+  tees: state.tees,
+  cups: state.cups || CUP_MARKERS,
+  courses: state.courses,
+  updatedAt: state.updatedAt || new Date().toISOString(),
+});
 
   const mirrorLayout = state => {
     setSyncStatus('Saving layout to Google Sheets…');
@@ -162,7 +184,13 @@ export default function GolfPage() {
   const previewRandom = () => {
     try {
       const seed = Date.now();
-      const holes = generateRoundHoles(profile.tees, Number(roundLength), ballType, seed);
+      const holes = generateRoundHoles(
+  profile.tees,
+  Number(roundLength),
+  ballType,
+  seed,
+  profile.cups || CUP_MARKERS
+);
       setRandomPreview({ holes, seed });
       setMessage(`Generated ${roundLength} unique, approved holes. Review them below or generate another.`);
     } catch (error) {
@@ -172,7 +200,7 @@ export default function GolfPage() {
   };
 
   const startPreset = course => {
-    const holes = materializeCourse(course, profile.tees);
+    const holes = materializeCourse(course, profile.tees, profile.cups || CUP_MARKERS);
     if (holes.some(hole => !getTee(profile.tees, hole.teeId) || !getCup(hole.cupId))) {
       setMessage('This course references an archived tee or missing cup. Edit the course before play.');
       return;
@@ -202,9 +230,42 @@ export default function GolfPage() {
     setMessage('Round complete. Your scorecard is now in course history.');
   };
 
+const cancelRound = () => {
+  if (!activeRound) return;
+
+  const now = new Date().toISOString();
+
+  const cancelled = {
+    ...activeRound,
+    status: 'cancelled',
+    cancelledAt: now,
+    updatedAt: now,
+  };
+
+  const saved = golfStorage.saveRound(username, cancelled);
+
+  setProfile(saved);
+  setTab('home');
+  setActiveHoleIndex(0);
+  setMessage('Round cancelled. Its history has been retained.');
+
+  setSyncStatus('Cancelling round in Google Sheets…');
+
+  golfSheets.saveRound(username, cancelled)
+    .then(() => setSyncStatus('Google Sheets connected'))
+    .catch(() => {
+      setSyncStatus('Saved on this device · Google sync pending');
+    });
+};
+
   const updateTee = () => {
     if (!teeDraft) return;
-    const permittedCupIds = teeDraft.permitted.split(',').map(id => id.trim().toUpperCase()).filter(id => CUP_MARKERS.some(cup => cup.id === id));
+const permittedCupIds = teeDraft.permitted
+  .split(',')
+  .map(id => id.trim().toUpperCase())
+  .filter(id =>
+    (profile.cups || CUP_MARKERS).some(cup => cup.id === id)
+  );
     if (!teeDraft.name.trim() || !permittedCupIds.length || !Number.isFinite(Number(teeDraft.x)) || !Number.isFinite(Number(teeDraft.y))) {
       setMessage('A tee needs a name, map X/Y values, and at least one valid permitted cup.'); return;
     }
@@ -302,18 +363,20 @@ export default function GolfPage() {
     })))
     .sort((a, b) => a.total - b.total || new Date(a.date) - new Date(b.date));
 
-  const map = (extra = {}) => (
-    <GolfCourseMap
-      tees={profile.tees}
-      selectedTeeId={extra.teeId || selectedTeeId}
-      selectedCupId={extra.cupId || selectedCupId}
-      onSelectTee={setSelectedTeeId}
-      onSelectCup={setSelectedCupId}
-      showTees={showTees}
-      showMeasurements={showMeasurements}
-      units={units}
-    />
-  );
+const map = (extra = {}) => (
+  <GolfCourseMap
+    tees={profile.tees}
+    cups={profile.cups || CUP_MARKERS}
+    selectedTeeId={extra.teeId || selectedTeeId}
+    selectedCupId={extra.cupId || selectedCupId}
+    onSelectTee={setSelectedTeeId}
+    onSelectCup={setSelectedCupId}
+    showTees={showTees}
+    showMeasurements={showMeasurements}
+    showOnlySelectedMarkers={Boolean(extra.onlySelectedMarkers)}
+    units={units}
+  />
+);
 
   const playerFields = (
     <div className="golf-player-fields">
@@ -375,7 +438,7 @@ export default function GolfPage() {
             <div className="golf-section-heading"><div><div className="golf-eyebrow">PRESET COURSE</div><h2>Play a saved layout</h2></div></div>
             <div className="golf-course-play-list">
               {profile.courses.map(course => {
-                const holes = materializeCourse(course, profile.tees);
+                const holes = materializeCourse(course, profile.tees, profile.cups || CUP_MARKERS);
                 return <article key={course.id} className="golf-course-row"><div><strong>{course.name}</strong><span>{holes.length} holes · Par {coursePar(holes)}</span><p>{course.description}</p></div><button type="button" className="action" onClick={() => startPreset(course)}>Play</button></article>;
               })}
             </div>
@@ -395,11 +458,47 @@ export default function GolfPage() {
         <div className="grid">
           <section className="card golf-round-header">
             <div><div className="golf-eyebrow">{activeRound.courseName}</div><h2>Hole {activeHoleIndex + 1} of {activeRound.holes.length}</h2><p>{activeRound.players.map(player => player.name).join(' · ')} · {shortBallLabel(activeRound.ballType)}</p></div>
-            <div className="golf-hole-nav"><button className="ghost" disabled={activeHoleIndex === 0} onClick={() => setActiveHoleIndex(value => Math.max(0, value - 1))}>Previous</button><button className="ghost" disabled={activeHoleIndex === activeRound.holes.length - 1} onClick={() => setActiveHoleIndex(value => Math.min(activeRound.holes.length - 1, value + 1))}>Next</button></div>
+           <div className="golf-hole-nav">
+  <button
+    type="button"
+    className="ghost"
+    disabled={activeHoleIndex === 0}
+    onClick={() =>
+      setActiveHoleIndex(value => Math.max(0, value - 1))
+    }
+  >
+    Previous
+  </button>
+
+  <button
+    type="button"
+    className="ghost"
+    disabled={activeHoleIndex === activeRound.holes.length - 1}
+    onClick={() =>
+      setActiveHoleIndex(value =>
+        Math.min(activeRound.holes.length - 1, value + 1)
+      )
+    }
+  >
+    Next
+  </button>
+
+  <button
+    type="button"
+    className="golf-danger-button"
+    onClick={cancelRound}
+  >
+    Cancel round
+  </button>
+</div>
           </section>
           {(() => {
             const hole = activeRound.holes[activeHoleIndex];
-            return <section className="golf-active-hole"><div className="card golf-hole-details"><div className="golf-eyebrow">TEE → CUP</div><h2>{hole.teeId} → {hole.cupId}</h2><div className="golf-distance-large">{formatDistance(hole.distanceFeet, units)}</div><p><span className="badge">Par {hole.par}</span> <span className="badge">{hole.distanceSource === 'verified' ? 'Verified' : 'Estimated from map'}</span></p><p className="muted">{hole.teeName} to {hole.cupName}</p></div>{map({ teeId: hole.teeId, cupId: hole.cupId })}</section>;
+            return <section className="golf-active-hole"><div className="card golf-hole-details"><div className="golf-eyebrow">TEE → CUP</div><h2>{hole.teeId} → {hole.cupId}</h2><div className="golf-distance-large">{formatDistance(hole.distanceFeet, units)}</div><p><span className="badge">Par {hole.par}</span> <span className="badge">{hole.distanceSource === 'verified' ? 'Verified' : 'Estimated from map'}</span></p><p className="muted">{hole.teeName} to {hole.cupName}</p></div>{map({
+  teeId: hole.teeId,
+  cupId: hole.cupId,
+  onlySelectedMarkers: true,
+})}</section>;
           })()}
           <section className="card"><div className="golf-section-heading"><div><div className="golf-eyebrow">SCORECARD</div><h2>Enter or edit strokes</h2></div><button type="button" className="primary" onClick={completeRound}>Complete round</button></div><GolfScorecard round={activeRound} editable activeHoleIndex={activeHoleIndex} onScoreChange={updateScore} /></section>
         </div>
@@ -409,15 +508,23 @@ export default function GolfPage() {
 
       {tab === 'courses' && (
         <div className="grid">
-          <section className="card"><div className="golf-section-heading"><div><div className="golf-eyebrow">COURSE LIBRARY</div><h2>Saved courses</h2></div><button type="button" className="action" onClick={newCourse}>New course</button></div><div className="golf-course-grid">{profile.courses.map(course => { const holes = materializeCourse(course, profile.tees); return <article key={course.id} className="golf-course-card"><div><span className="badge">{holes.length} holes</span><h3>{course.name}</h3><p>{course.description}</p><p className="muted">Par {coursePar(holes)}</p></div><div className="golf-course-card-actions"><button className="ghost" onClick={() => openCourseEditor(course)}>Edit</button><button className="ghost" onClick={() => duplicateCourse(course)}>Duplicate</button><button className="action" onClick={() => { setSelectedCourseId(course.id); setTab('play'); }}>Play</button></div></article>; })}</div></section>
-          {courseDraft && <section className="card"><div className="golf-section-heading"><div><div className="golf-eyebrow">COURSE BUILDER</div><h2>{courseDraft.name || 'Untitled course'}</h2></div><button className="primary" onClick={saveCourse}>Save course</button></div><div className="golf-form-grid"><label>Course name<input value={courseDraft.name} onChange={event => setCourseDraft(draft => ({ ...draft, name: event.target.value }))} /></label><label>Description<input value={courseDraft.description || ''} onChange={event => setCourseDraft(draft => ({ ...draft, description: event.target.value }))} /></label></div><div className="golf-builder-add"><select value={selectedTeeId} onChange={event => setSelectedTeeId(event.target.value)}>{profile.tees.filter(tee => tee.active !== false).map(tee => <option key={tee.id} value={tee.id}>{tee.id} · {tee.name}</option>)}</select><select value={selectedCupId} onChange={event => setSelectedCupId(event.target.value)}>{CUP_MARKERS.map(cup => <option key={cup.id} value={cup.id}>{cup.id} · {cup.name}</option>)}</select><button className="action" onClick={() => setCourseDraft(draft => ({ ...draft, holes: [...draft.holes, [selectedTeeId, selectedCupId]] }))}>Add hole</button></div><ol className="golf-builder-holes">{courseDraft.holes.map((hole, index) => <li key={`${hole[0]}-${hole[1]}-${index}`}><span>Hole {index + 1}: <strong>{hole[0]} → {hole[1]}</strong></span><button className="golf-text-button" onClick={() => setCourseDraft(draft => ({ ...draft, holes: draft.holes.filter((_, itemIndex) => itemIndex !== index) }))}>Remove</button></li>)}</ol>{profile.courses.some(course => course.id === courseDraft.id) && <button className="golf-danger-button" onClick={() => deleteCourse(courseDraft)}>Delete course</button>}</section>}
+          <section className="card"><div className="golf-section-heading"><div><div className="golf-eyebrow">COURSE LIBRARY</div><h2>Saved courses</h2></div><button type="button" className="action" onClick={newCourse}>New course</button></div><div className="golf-course-grid">{profile.courses.map(course => { const holes = materializeCourse(course, profile.tees, profile.cups || CUP_MARKERS); return <article key={course.id} className="golf-course-card"><div><span className="badge">{holes.length} holes</span><h3>{course.name}</h3><p>{course.description}</p><p className="muted">Par {coursePar(holes)}</p></div><div className="golf-course-card-actions"><button className="ghost" onClick={() => openCourseEditor(course)}>Edit</button><button className="ghost" onClick={() => duplicateCourse(course)}>Duplicate</button><button className="action" onClick={() => { setSelectedCourseId(course.id); setTab('play'); }}>Play</button></div></article>; })}</div></section>
+          {courseDraft && <section className="card"><div className="golf-section-heading"><div><div className="golf-eyebrow">COURSE BUILDER</div><h2>{courseDraft.name || 'Untitled course'}</h2></div><button className="primary" onClick={saveCourse}>Save course</button></div><div className="golf-form-grid"><label>Course name<input value={courseDraft.name} onChange={event => setCourseDraft(draft => ({ ...draft, name: event.target.value }))} /></label><label>Description<input value={courseDraft.description || ''} onChange={event => setCourseDraft(draft => ({ ...draft, description: event.target.value }))} /></label></div><div className="golf-builder-add"><select value={selectedTeeId} onChange={event => setSelectedTeeId(event.target.value)}>{profile.tees.filter(tee => tee.active !== false).map(tee => <option key={tee.id} value={tee.id}>{tee.id} · {tee.name}</option>)}</select><select value={selectedCupId} onChange={event => setSelectedCupId(event.target.value)}>{(profile.cups || CUP_MARKERS).map(cup => (
+  <option key={cup.id} value={cup.id}>
+    {cup.id} · {cup.name}
+  </option>
+))}</select><button className="action" onClick={() => setCourseDraft(draft => ({ ...draft, holes: [...draft.holes, [selectedTeeId, selectedCupId]] }))}>Add hole</button></div><ol className="golf-builder-holes">{courseDraft.holes.map((hole, index) => <li key={`${hole[0]}-${hole[1]}-${index}`}><span>Hole {index + 1}: <strong>{hole[0]} → {hole[1]}</strong></span><button className="golf-text-button" onClick={() => setCourseDraft(draft => ({ ...draft, holes: draft.holes.filter((_, itemIndex) => itemIndex !== index) }))}>Remove</button></li>)}</ol>{profile.courses.some(course => course.id === courseDraft.id) && <button className="golf-danger-button" onClick={() => deleteCourse(courseDraft)}>Delete course</button>}</section>}
         </div>
       )}
 
       {tab === 'map' && (
         <div className="grid golf-map-page-grid">
           {map()}
-          <section className="card golf-map-inspector"><div className="golf-section-heading"><div><div className="golf-eyebrow">MAP INSPECTOR</div><h2>{selectedTeeId} → {selectedCupId}</h2></div><span className="badge">{selectedMapHole?.distanceSource === 'verified' ? 'Verified' : 'Estimated'}</span></div><div className="golf-map-selects"><label>Tee<select value={selectedTeeId} onChange={event => setSelectedTeeId(event.target.value)}>{profile.tees.filter(tee => tee.active !== false).map(tee => <option key={tee.id} value={tee.id}>{tee.id} · {tee.name}</option>)}</select></label><label>Cup<select value={selectedCupId} onChange={event => setSelectedCupId(event.target.value)}>{CUP_MARKERS.map(cup => <option key={cup.id} value={cup.id}>{cup.id} · {cup.name}</option>)}</select></label></div><div className="golf-distance-large">{selectedMapHole ? formatDistance(selectedMapHole.distanceFeet, units) : '—'}</div><p className="muted">Straight-line estimate based on the 66′ × 50′ turf calibration. Measure each tee-to-cup pair in the yard to mark it verified.</p><div className="golf-choice-row"><button className={units === 'yards' ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setUnits('yards')}>Yards</button><button className={units === 'feet' ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setUnits('feet')}>Feet</button><button className={showTees ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setShowTees(value => !value)}>Tees</button><button className={showMeasurements ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setShowMeasurements(value => !value)}>Measure</button></div></section>
+          <section className="card golf-map-inspector"><div className="golf-section-heading"><div><div className="golf-eyebrow">MAP INSPECTOR</div><h2>{selectedTeeId} → {selectedCupId}</h2></div><span className="badge">{selectedMapHole?.distanceSource === 'verified' ? 'Verified' : 'Estimated'}</span></div><div className="golf-map-selects"><label>Tee<select value={selectedTeeId} onChange={event => setSelectedTeeId(event.target.value)}>{profile.tees.filter(tee => tee.active !== false).map(tee => <option key={tee.id} value={tee.id}>{tee.id} · {tee.name}</option>)}</select></label><label>Cup<select value={selectedCupId} onChange={event => setSelectedCupId(event.target.value)}>{(profile.cups || CUP_MARKERS).map(cup => (
+  <option key={cup.id} value={cup.id}>
+    {cup.id} · {cup.name}
+  </option>
+))}</select></label></div><div className="golf-distance-large">{selectedMapHole ? formatDistance(selectedMapHole.distanceFeet, units) : '—'}</div><p className="muted">Straight-line estimate based on the 66′ × 50′ turf calibration. Measure each tee-to-cup pair in the yard to mark it verified.</p><div className="golf-choice-row"><button className={units === 'yards' ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setUnits('yards')}>Yards</button><button className={units === 'feet' ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setUnits('feet')}>Feet</button><button className={showTees ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setShowTees(value => !value)}>Tees</button><button className={showMeasurements ? 'golf-choice is-active' : 'golf-choice'} onClick={() => setShowMeasurements(value => !value)}>Measure</button></div></section>
           {teeDraft && <section className="card"><div className="golf-section-heading"><div><div className="golf-eyebrow">TEE EDITOR</div><h2>{teeDraft.id}</h2></div><button className="action" onClick={addTee}>Add tee</button></div><div className="golf-form-grid"><label>Name<input value={teeDraft.name} onChange={event => setTeeDraft(draft => ({ ...draft, name: event.target.value }))} /></label><label>Surface<input value={teeDraft.surface} onChange={event => setTeeDraft(draft => ({ ...draft, surface: event.target.value }))} /></label><label>Map X<input type="number" value={teeDraft.x} onChange={event => setTeeDraft(draft => ({ ...draft, x: event.target.value }))} /></label><label>Map Y<input type="number" value={teeDraft.y} onChange={event => setTeeDraft(draft => ({ ...draft, y: event.target.value }))} /></label><label>Ball approval<select value={teeDraft.ballType} onChange={event => setTeeDraft(draft => ({ ...draft, ballType: event.target.value }))}><option value="real">Real ball</option><option value="foam">Foam ball</option><option value="both">Both</option></select></label><label>Permitted cups<input value={teeDraft.permitted} placeholder="H1, H2" onChange={event => setTeeDraft(draft => ({ ...draft, permitted: event.target.value }))} /></label></div><div className="golf-editor-actions"><button className="primary" onClick={updateTee}>Save tee</button><button className="golf-danger-button" onClick={archiveTee}>Archive tee</button></div></section>}
         </div>
       )}

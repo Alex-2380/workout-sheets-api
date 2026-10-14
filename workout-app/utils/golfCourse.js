@@ -83,6 +83,10 @@ export const PRESET_COURSES = [
 
 const clone = value => JSON.parse(JSON.stringify(value));
 
+export function defaultCups() {
+  return clone(CUP_MARKERS);
+}
+
 export function defaultTees() {
   return clone(INITIAL_TEES);
 }
@@ -91,8 +95,8 @@ export function defaultCourses() {
   return clone(PRESET_COURSES);
 }
 
-export function getCup(id) {
-  return CUP_MARKERS.find(cup => cup.id === id) || null;
+export function getCup(id, cups = CUP_MARKERS) {
+  return (cups || []).find(cup => cup.id === id) || null;
 }
 
 export function getTee(tees, id) {
@@ -127,10 +131,19 @@ export function formatDistance(feet, units = 'yards') {
   return `${yards >= 10 ? Math.round(yards) : yards.toFixed(1)} yd`;
 }
 
-export function holeFromPair(tees, teeId, cupId, overrides = {}) {
+export function holeFromPair(
+  tees,
+  teeId,
+  cupId,
+  overrides = {},
+  cups = CUP_MARKERS
+) {
   const tee = getTee(tees, teeId);
-  const cup = getCup(cupId);
-  const distanceFeet = overrides.distanceFeet ?? estimatedDistanceFeet(tee, cup);
+  const cup = getCup(cupId, cups);
+
+  const distanceFeet =
+    overrides.distanceFeet ?? estimatedDistanceFeet(tee, cup);
+
   return {
     id: overrides.id || `${teeId}-${cupId}`,
     teeId,
@@ -139,14 +152,21 @@ export function holeFromPair(tees, teeId, cupId, overrides = {}) {
     cupName: cup?.name || cupId,
     par: overrides.par ?? 3,
     distanceFeet: Number(distanceFeet.toFixed(1)),
-    distanceSource: overrides.distanceSource || tee?.distanceSource || 'estimated',
+    distanceSource:
+      overrides.distanceSource || tee?.distanceSource || 'estimated',
   };
 }
 
-export function materializeCourse(course, tees) {
+export function materializeCourse(course, tees, cups = CUP_MARKERS) {
   return (course?.holes || []).map((entry, index) => {
-    const [teeId, cupId] = Array.isArray(entry) ? entry : [entry.teeId, entry.cupId];
-    return { number: index + 1, ...holeFromPair(tees, teeId, cupId, entry) };
+    const [teeId, cupId] = Array.isArray(entry)
+      ? entry
+      : [entry.teeId, entry.cupId];
+
+    return {
+      number: index + 1,
+      ...holeFromPair(tees, teeId, cupId, entry, cups),
+    };
   });
 }
 
@@ -155,10 +175,18 @@ export function isBallAllowed(tee, ballType = 'any') {
   return ballType === 'any' || tee.ballType === 'both' || tee.ballType === ballType;
 }
 
-export function validCombinations(tees, ballType = 'any') {
+export function validCombinations(
+  tees,
+  ballType = 'any',
+  cups = CUP_MARKERS
+) {
   return (tees || [])
     .filter(tee => isBallAllowed(tee, ballType))
-    .flatMap(tee => (tee.permittedCupIds || []).map(cupId => holeFromPair(tees, tee.id, cupId)));
+    .flatMap(tee =>
+      (tee.permittedCupIds || [])
+        .filter(cupId => getCup(cupId, cups))
+        .map(cupId => holeFromPair(tees, tee.id, cupId, {}, cups))
+    );
 }
 
 function seededRandom(seed) {
@@ -173,8 +201,14 @@ function pick(items, random) {
   return items.length ? items[Math.floor(random() * items.length)] : null;
 }
 
-export function generateRoundHoles(tees, length, ballType = 'any', seed = Date.now()) {
-  const combinations = validCombinations(tees, ballType);
+export function generateRoundHoles(
+  tees,
+  length,
+  ballType = 'any',
+  seed = Date.now(),
+  cups = CUP_MARKERS
+) {
+  const combinations = validCombinations(tees, ballType, cups);
   if (combinations.length < length) {
     throw new Error(`Only ${combinations.length} approved tee-to-cup combinations are available for this ball type; ${length} unique holes were requested.`);
   }
@@ -193,7 +227,9 @@ export function generateRoundHoles(tees, length, ballType = 'any', seed = Date.n
 
   for (let index = 0; index < length; index += 1) {
     const preferredBucket = buckets[bucketOrder[index % bucketOrder.length]];
-    const preferredCup = CUP_MARKERS[index % CUP_MARKERS.length].id;
+    const preferredCup = cups.length
+  ? cups[index % cups.length].id
+  : null;
     const unused = list => list.filter(hole => !used.has(`${hole.teeId}-${hole.cupId}`));
     let options = unused(preferredBucket.filter(hole => hole.cupId === preferredCup));
     if (!options.length) options = unused(preferredBucket);
