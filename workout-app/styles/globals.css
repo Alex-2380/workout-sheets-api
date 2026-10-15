@@ -648,8 +648,8 @@ select {
 .golf-sync-card { grid-column: 1 / -1; padding: 13px 16px; }
 .golf-section-heading { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
 .golf-section-heading h2 { margin: 3px 0 0; font-size: 21px; }
-.golf-choice-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.golf-choice { border: 1px solid var(--input-border); border-radius: 10px; background: var(--input-bg); padding: 9px 11px; font-size: 13px; }
+.golf-choice-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.golf-choice { border: 1px solid var(--input-border); border-radius: 10px; background: var(--input-bg); padding: 9px 10px; font-size: 13px; }
 .golf-choice.is-active { color: #fff; border-color: #62a653; background: #3f843e; font-weight: 800; }
 .golf-player-fields { display: grid; gap: 9px; max-width: 520px; }
 .golf-player-fields input { width: 100%; }
