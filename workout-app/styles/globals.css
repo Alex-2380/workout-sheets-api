@@ -204,7 +204,6 @@ select {
   position: sticky;
   top: 0;
   z-index: 40;
-  backdrop-filter: blur(1px);
 }
 :root[data-theme="light"] .toolbar {
   background: linear-gradient(to bottom, #c5c5c7, #c5c5c7 80%, transparent);
