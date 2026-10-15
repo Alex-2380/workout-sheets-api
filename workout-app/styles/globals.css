@@ -71,7 +71,7 @@ html, body, #__next {
 
 /* if you have a top toolbar that should reach into the notch area */
 .toolbar {
-  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
 }
 body {
   margin: 0;
