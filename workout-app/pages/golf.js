@@ -457,31 +457,13 @@ const map = (extra = {}) => (
       {tab === 'round' && activeRound && (
         <div className="grid">
           <section className="card golf-round-header">
-            <div><div className="golf-eyebrow">{activeRound.courseName}</div><h2>Hole {activeHoleIndex + 1} of {activeRound.holes.length}</h2><p>{activeRound.players.map(player => player.name).join(' · ')} · {shortBallLabel(activeRound.ballType)}</p></div>
-           <div className="golf-hole-nav">
-  <button
-    type="button"
-    className="ghost"
-    disabled={activeHoleIndex === 0}
-    onClick={() =>
-      setActiveHoleIndex(value => Math.max(0, value - 1))
-    }
-  >
-    Previous
-  </button>
-
-  <button
-    type="button"
-    className="ghost"
-    disabled={activeHoleIndex === activeRound.holes.length - 1}
-    onClick={() =>
-      setActiveHoleIndex(value =>
-        Math.min(activeRound.holes.length - 1, value + 1)
-      )
-    }
-  >
-    Next
-  </button>
+  <div>
+    <div className="golf-eyebrow">ROUND IN PROGRESS</div>
+    <h2>{activeRound.courseName}</h2>
+    <p>
+      {activeRound.players.map(player => player.name).join(' · ')}
+    </p>
+  </div>
 
   <button
     type="button"
@@ -490,17 +472,99 @@ const map = (extra = {}) => (
   >
     Cancel round
   </button>
+</section>
+         {(() => {
+  const hole = activeRound.holes[activeHoleIndex];
+
+  return (
+    <section className="golf-active-hole">
+      {map({
+        teeId: hole.teeId,
+        cupId: hole.cupId,
+        onlySelectedMarkers: true,
+      })}
+    </section>
+  );
+})()}
+          
+<section className="card">
+  <div className="golf-section-heading">
+    <div>
+      <div className="golf-eyebrow">SCORECARD</div>
+      <h2>Enter or edit strokes</h2>
+    </div>
+    <button
+      type="button"
+      className="primary"
+      onClick={completeRound}
+    >
+      Complete round
+    </button>
+  </div>
+
+  <GolfScorecard
+    round={activeRound}
+    editable
+    activeHoleIndex={activeHoleIndex}
+    onScoreChange={updateScore}
+    onHoleSelect={setActiveHoleIndex}
+  />
+
+ <div className="golf-hole-navigation">
+  <button
+    type="button"
+    className="action"
+    onClick={() =>
+      setActiveHoleIndex(index => Math.max(0, index - 1))
+    }
+    disabled={activeHoleIndex <= 0}
+  >
+    ← Previous
+  </button>
+
+{(() => {
+  const hole = activeRound.holes[activeHoleIndex];
+
+  return (
+    <div className="golf-hole-navigation-status">
+      <div className="golf-hole-nav-count">
+        Hole {activeHoleIndex + 1} of {activeRound.holes.length}
+      </div>
+
+      <div className="golf-hole-nav-main">
+        <span className="golf-hole-nav-route">
+          {hole.teeId} → {hole.cupId}
+        </span>
+
+        <span className="golf-hole-nav-divider" aria-hidden="true" />
+
+        <span className="golf-hole-nav-distance">
+          {formatDistance(hole.distanceFeet, units)}
+        </span>
+      </div>
+
+      <div className="golf-hole-nav-names">
+        {hole.teeName} → {hole.cupName}
+      </div>
+    </div>
+  );
+})()}
+
+  <button
+    type="button"
+    className="primary"
+    onClick={() =>
+      setActiveHoleIndex(index =>
+        Math.min(activeRound.holes.length - 1, index + 1)
+      )
+    }
+    disabled={activeHoleIndex >= activeRound.holes.length - 1}
+  >
+    Next →
+  </button>
 </div>
-          </section>
-          {(() => {
-            const hole = activeRound.holes[activeHoleIndex];
-            return <section className="golf-active-hole"><div className="card golf-hole-details"><div className="golf-eyebrow">TEE → CUP</div><h2>{hole.teeId} → {hole.cupId}</h2><div className="golf-distance-large">{formatDistance(hole.distanceFeet, units)}</div><p><span className="badge">Par {hole.par}</span> <span className="badge">{hole.distanceSource === 'verified' ? 'Verified' : 'Estimated from map'}</span></p><p className="muted">{hole.teeName} to {hole.cupName}</p></div>{map({
-  teeId: hole.teeId,
-  cupId: hole.cupId,
-  onlySelectedMarkers: true,
-})}</section>;
-          })()}
-          <section className="card"><div className="golf-section-heading"><div><div className="golf-eyebrow">SCORECARD</div><h2>Enter or edit strokes</h2></div><button type="button" className="primary" onClick={completeRound}>Complete round</button></div><GolfScorecard round={activeRound} editable activeHoleIndex={activeHoleIndex} onScoreChange={updateScore} /></section>
+</section>
+
         </div>
       )}
 
