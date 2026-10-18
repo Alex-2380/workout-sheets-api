@@ -204,6 +204,7 @@ select {
   position: sticky;
   top: 0;
   z-index: 40;
+  background: linear-gradient(to bottom, rgba(11,11,14,.92), rgba(11,11,14,.76) 70%, transparent);
 }
 :root[data-theme="light"] .toolbar {
   background: linear-gradient(to bottom, #c5c5c7, #c5c5c7 80%, transparent);
@@ -608,7 +609,7 @@ select {
 .golf-hero p { margin: 0; max-width: 580px; color: var(--muted); line-height: 1.45; }
 .golf-hero-status { position: relative; z-index: 1; display: grid; gap: 8px; justify-items: end; text-align: right; }
 .golf-user { color: var(--muted); font-size: 13px; }
-.golf-eyebrow { color: #8ddb82; font-size: 11px; font-weight: 800; letter-spacing: .12em; line-height: 1.3; }
+.golf-eyebrow { color: #8ddb82; font-size: 15px; font-weight: 800; letter-spacing: .12em; line-height: 1.3; }
 :root[data-theme="light"] .golf-eyebrow { color: #276728; }
 .golf-tabs {
   display: flex;
@@ -647,7 +648,7 @@ select {
 .golf-resume-card p, .golf-summary-card p, .golf-sync-card p { margin: 0; line-height: 1.45; }
 .golf-sync-card { grid-column: 1 / -1; padding: 13px 16px; }
 .golf-section-heading { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
-.golf-section-heading h2 { margin: 3px 0 0; font-size: 21px; }
+.golf-section-heading h2 { margin: 3px 0 0; font-size: 14px; }
 .golf-choice-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .golf-choice { border: 1px solid var(--input-border); border-radius: 10px; background: var(--input-bg); padding: 9px 10px; font-size: 13px; }
 .golf-choice.is-active { color: #fff; border-color: #62a653; background: #3f843e; font-weight: 800; }
